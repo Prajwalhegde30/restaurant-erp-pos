@@ -1,0 +1,14 @@
+// This is the Prisma schema file for the Restaurant ERP + POS SaaS platform.
+// Reference: docs/DatabaseSchema.md (v1.0.0-DBA) + docs/Architecture.md (v1.2.0-ARCH)
+//
+// This file is the Single Source of Truth for the database model.
+// All business entities will be added in subsequent phase tasks.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
