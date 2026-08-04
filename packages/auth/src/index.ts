@@ -33,6 +33,16 @@
  *   - Service: extractBearerToken, authenticateRequest, authorizeRequest,
  *              createAuthMiddleware, createRbacMiddleware
  *
+ * Task 2.4 Exports — Tenant Context Injection & Data Isolation:
+ *   - Types: TenantContext, TenantMiddlewareOptions, PrismaExtensionOptions,
+ *            PrismaQueryExtensionArgs
+ *   - Errors: TenantIsolationError, MissingTenantContextError,
+ *             CrossTenantAccessError
+ *   - Service: tenantContextStorage, getTenantContext, requireTenantContext,
+ *              getTenantId, requireTenantId, getBranchId, getUserId,
+ *              runWithTenantContext, createTenantContextMiddleware,
+ *              interceptPrismaQuery, createTenantIsolationExtension
+ *
  * Authority:
  *   Architecture.md §5.3 — @repo/auth: "Shared JWT validation, RBAC evaluation
  *     logic, and permission matrices."
@@ -124,3 +134,31 @@ export {
   createAuthMiddleware,
   createRbacMiddleware,
 } from './middlewareService.js';
+
+// ─── Task 2.4: Tenant Context Injection & Data Isolation ─────────────────────
+export type {
+  TenantContext,
+  TenantMiddlewareOptions,
+  PrismaExtensionOptions,
+  PrismaQueryExtensionArgs,
+} from './tenant.types.js';
+
+export {
+  TenantIsolationError,
+  MissingTenantContextError,
+  CrossTenantAccessError,
+} from './tenant.errors.js';
+
+export {
+  tenantContextStorage,
+  getTenantContext,
+  requireTenantContext,
+  getTenantId,
+  requireTenantId,
+  getBranchId,
+  getUserId,
+  runWithTenantContext,
+  createTenantContextMiddleware,
+  interceptPrismaQuery,
+  createTenantIsolationExtension,
+} from './tenantService.js';
