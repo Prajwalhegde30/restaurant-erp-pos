@@ -24,6 +24,15 @@
  *   - Service: evaluatePermissions, assertPermission, resolveRoleInheritance,
  *              isTemporalGrantActive, isScopeSufficient
  *
+ * Task 2.3 Exports — API Authentication & Authorization Middleware:
+ *   - Types: AuthenticatedContext, AuthRequest, AuthResponse,
+ *            AuthMiddlewareOptions, RbacMiddlewareOptions, NextFunction,
+ *            HttpMiddleware
+ *   - Errors: AuthenticationError, MissingAuthHeaderError,
+ *             InvalidAuthHeaderFormatError, UnauthenticatedContextError
+ *   - Service: extractBearerToken, authenticateRequest, authorizeRequest,
+ *              createAuthMiddleware, createRbacMiddleware
+ *
  * Authority:
  *   Architecture.md §5.3 — @repo/auth: "Shared JWT validation, RBAC evaluation
  *     logic, and permission matrices."
@@ -89,3 +98,29 @@ export {
   isTemporalGrantActive,
   isScopeSufficient,
 } from './rbacService.js';
+
+// ─── Task 2.3: API Authentication & Authorization Middleware ─────────────────
+export type {
+  AuthenticatedContext,
+  AuthRequest,
+  AuthResponse,
+  AuthMiddlewareOptions,
+  RbacMiddlewareOptions,
+  NextFunction,
+  HttpMiddleware,
+} from './middleware.types.js';
+
+export {
+  AuthenticationError,
+  MissingAuthHeaderError,
+  InvalidAuthHeaderFormatError,
+  UnauthenticatedContextError,
+} from './middleware.errors.js';
+
+export {
+  extractBearerToken,
+  authenticateRequest,
+  authorizeRequest,
+  createAuthMiddleware,
+  createRbacMiddleware,
+} from './middlewareService.js';
