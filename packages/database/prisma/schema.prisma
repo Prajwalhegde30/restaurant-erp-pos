@@ -258,6 +258,8 @@ model Tenant {
   shifts                 Shift[]
   cashDrawers            CashDrawer[]
   dailyClosings          DailyClosing[]
+  // Relations — Audit
+  auditLogs              AuditLog[]
 
   @@map("tenants")
 }
@@ -334,6 +336,7 @@ model User {
   orders            Order[]
   reservations      Reservation[]
   shifts            Shift[]
+  auditLogs         AuditLog[]
 
   // Note: Partial unique index (tenant_id, email) WHERE is_deleted = false enforced in migration
   @@index([tenantId])
@@ -1780,4 +1783,55 @@ model JournalEntry {
   @@index([journalId])
   @@index([ledgerAccountId])
   @@map("journal_entries")
+}
+
+// ==========================================
+// AUDIT LOG MODEL (Task 1.4)
+// ==========================================
+
+// --- AuditLog (§25.8, §16, CodingStandards §12) ---
+// Tamper-evident, append-only record of critical actions.
+// Written synchronously within the triggering transaction (CodingStandards §12).
+// Physical DELETE strictly prohibited (§3, §17). No soft delete columns — immutable by design.
+// Actions audited include: Voids, Config changes, Reopening closed shifts, Permission grants, Day Close.
+model AuditLog {
+  id       String @id @default(uuid())
+  tenantId String @map("tenant_id")
+
+  // Actor — nullable for system-generated events (e.g., scheduled workers)
+  userId String? @map("user_id")
+
+  // Audited entity reference (polymorphic — entity type + entity id)
+  entityType String @map("entity_type")
+  entityId   String @map("entity_id")
+
+  // Action performed (e.g., ORDER_VOIDED, SHIFT_REOPENED, CONFIG_CHANGED)
+  action String
+
+  // Before/after state captured as JSONB for full mutation traceability (§16)
+  // Only fields that changed are captured; omitted if not applicable (e.g., DELETE equivalent).
+  beforeState Json? @map("before_state")
+  afterState  Json? @map("after_state")
+
+  // Reason/justification — mandatory for high-sensitivity actions (Voids, Reopening)
+  reason String?
+
+  // Metadata for distributed tracing and forensic correlation
+  ipAddress     String? @map("ip_address")
+  userAgent     String? @map("user_agent")
+  correlationId String? @map("correlation_id")
+
+  // Immutable timestamp — records when the audit event was written
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  user   User?  @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  // Composite indexes for common forensic and compliance query patterns (§22)
+  @@index([tenantId])
+  @@index([entityType, entityId])
+  @@index([tenantId, action, createdAt])
+  @@index([userId])
+  @@map("audit_logs")
 }
