@@ -93,6 +93,110 @@ enum OrderItemStatus {
   VOIDED
 }
 
+// --- Supply Chain ---
+
+enum SupplierStatus {
+  ACTIVE
+  INACTIVE
+  BLACKLISTED
+}
+
+enum IngredientUnit {
+  KG
+  G
+  L
+  ML
+  PIECE
+  PORTION
+  BOX
+  PACK
+}
+
+enum StockMovementType {
+  PURCHASE
+  CONSUMPTION
+  SPOILAGE
+  TRANSFER_IN
+  TRANSFER_OUT
+  ADJUSTMENT
+  RETURN
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  PARTIALLY_RECEIVED
+  RECEIVED
+  CANCELLED
+}
+
+enum GoodsReceiptStatus {
+  PENDING
+  COMPLETED
+  REJECTED
+}
+
+// --- Finance ---
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  VOIDED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  INITIATED
+  AUTHORIZED
+  CAPTURED
+  FAILED
+  VOIDED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  MOBILE
+  GIFT_CARD
+  LOYALTY
+  SPLIT
+}
+
+enum RefundStatus {
+  PENDING
+  APPROVED
+  PROCESSED
+  REJECTED
+}
+
+enum JournalEntryType {
+  DEBIT
+  CREDIT
+}
+
+enum LedgerAccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum ShiftStatus {
+  OPEN
+  CLOSED
+}
+
+enum DailyClosingStatus {
+  PENDING
+  RECONCILED
+  LOCKED
+}
+
 // ==========================================
 // PLATFORM FOUNDATION MODELS
 // ==========================================
@@ -112,13 +216,14 @@ model Tenant {
   isDeleted Boolean   @default(false) @map("is_deleted")
   deletedAt DateTime? @map("deleted_at")
 
-  // Relations
+  // Relations — IAM
   branches               Branch[]
   users                  User[]
   roles                  Role[]
   permissions            Permission[]
   userRoles              UserRole[]
   branchAssignments      BranchAssignment[]
+  // Relations — Catalog
   menus                  Menu[]
   categories             Category[]
   menuItems              MenuItem[]
@@ -127,11 +232,32 @@ model Tenant {
   menuItemModifierGroups MenuItemModifierGroup[]
   combos                 Combo[]
   comboItems             ComboItem[]
+  // Relations — Operational
   diningTables           DiningTable[]
   reservations           Reservation[]
   orders                 Order[]
   orderItems             OrderItem[]
   orderMerges            OrderMerge[]
+  // Relations — Supply Chain
+  suppliers              Supplier[]
+  ingredients            Ingredient[]
+  inventoryItems         InventoryItem[]
+  inventoryBatches       InventoryBatch[]
+  stockMovements         StockMovement[]
+  recipes                Recipe[]
+  recipeIngredients      RecipeIngredient[]
+  purchaseOrders         PurchaseOrder[]
+  goodsReceipts          GoodsReceipt[]
+  // Relations — Finance
+  invoices               Invoice[]
+  payments               Payment[]
+  refunds                Refund[]
+  ledgerAccounts         LedgerAccount[]
+  journals               Journal[]
+  journalEntries         JournalEntry[]
+  shifts                 Shift[]
+  cashDrawers            CashDrawer[]
+  dailyClosings          DailyClosing[]
 
   @@map("tenants")
 }
@@ -156,14 +282,28 @@ model Branch {
   isDeleted Boolean   @default(false) @map("is_deleted")
   deletedAt DateTime? @map("deleted_at")
 
-  // Relations
+  // Relations — IAM
   tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   userRoles         UserRole[]
   branchAssignments BranchAssignment[]
+  // Relations — Catalog
   menuBranches      MenuBranch[]
+  // Relations — Operational
   diningTables      DiningTable[]
   reservations      Reservation[]
   orders            Order[]
+  // Relations — Supply Chain
+  suppliers         Supplier[]
+  inventoryItems    InventoryItem[]
+  inventoryBatches  InventoryBatch[]
+  stockMovements    StockMovement[]
+  purchaseOrders    PurchaseOrder[]
+  goodsReceipts     GoodsReceipt[]
+  // Relations — Finance
+  shifts            Shift[]
+  cashDrawers       CashDrawer[]
+  dailyClosings     DailyClosing[]
+  invoices          Invoice[]
 
   @@index([tenantId])
   @@map("branches")
@@ -193,6 +333,7 @@ model User {
   branchAssignments BranchAssignment[]
   orders            Order[]
   reservations      Reservation[]
+  shifts            Shift[]
 
   // Note: Partial unique index (tenant_id, email) WHERE is_deleted = false enforced in migration
   @@index([tenantId])
@@ -922,4 +1063,721 @@ model OrderItemRecipeSnapshot {
   @@index([orderItemId])
   @@index([ingredientId])
   @@map("order_item_recipe_snapshots")
+}
+
+// ==========================================
+// SUPPLY CHAIN MODELS (Task 1.3)
+// ==========================================
+
+// --- Supplier (§25.3) ---
+// Can be tenant-wide or branch-specific. Branch FK is nullable for tenant-wide suppliers.
+model Supplier {
+  id       String         @id @default(uuid())
+  tenantId String         @map("tenant_id")
+  branchId String?        @map("branch_id")
+  name     String
+  code     String
+  status   SupplierStatus @default(ACTIVE)
+
+  // Contact
+  contactName  String? @map("contact_name")
+  contactEmail String? @map("contact_email")
+  contactPhone String? @map("contact_phone")
+  address      String?
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch         Branch?         @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  purchaseOrders PurchaseOrder[]
+
+  // Note: Partial unique index UNIQUE(tenant_id, code) WHERE is_deleted = false enforced in migration
+  @@index([tenantId])
+  @@index([branchId])
+  @@map("suppliers")
+}
+
+// --- Ingredient (§25.3) ---
+// Master ingredient catalog. Central (tenant-level).
+// This model closes the forward-reference from order_item_recipe_snapshots.ingredient_id.
+model Ingredient {
+  id       String         @id @default(uuid())
+  tenantId String         @map("tenant_id")
+  name     String
+  unit     IngredientUnit @default(KG)
+
+  // Base unit cost for COGS calculations
+  unitCost Decimal @default(0) @map("unit_cost") @db.Decimal(10, 4)
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  inventoryItems    InventoryItem[]
+  recipeIngredients RecipeIngredient[]
+  inventoryBatches  InventoryBatch[]
+  stockMovements    StockMovement[]
+  goodsReceiptItems GoodsReceiptItem[]
+
+  @@index([tenantId])
+  @@map("ingredients")
+}
+
+// --- InventoryItem (§25.3) ---
+// Branch-level stock tracking. OCC applied (§14) — high-contention entity.
+model InventoryItem {
+  id           String @id @default(uuid())
+  tenantId     String @map("tenant_id")
+  branchId     String @map("branch_id")
+  ingredientId String @map("ingredient_id")
+
+  // Theoretical stock (from recipe deductions) vs actual (physical count)
+  theoreticalQty Decimal  @default(0) @map("theoretical_qty") @db.Decimal(10, 4)
+  actualQty      Decimal  @default(0) @map("actual_qty") @db.Decimal(10, 4)
+  reorderLevel   Decimal? @map("reorder_level") @db.Decimal(10, 4)
+  reorderQty     Decimal? @map("reorder_qty") @db.Decimal(10, 4)
+
+  // OCC (§14)
+  version Int @default(1)
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch     Branch     @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  // Note: Partial unique index UNIQUE(branch_id, ingredient_id) WHERE is_deleted = false enforced in migration
+  @@index([tenantId])
+  @@index([branchId])
+  @@index([ingredientId])
+  @@map("inventory_items")
+}
+
+// --- InventoryBatch (§25.3 FIFO/FEFO) ---
+// Physical batch tracking for FIFO/FEFO depletion. Immutable once received_qty is set.
+model InventoryBatch {
+  id           String @id @default(uuid())
+  tenantId     String @map("tenant_id")
+  branchId     String @map("branch_id")
+  ingredientId String @map("ingredient_id")
+
+  batchNumber  String    @map("batch_number")
+  receivedQty  Decimal   @map("received_qty") @db.Decimal(10, 4)
+  remainingQty Decimal   @map("remaining_qty") @db.Decimal(10, 4)
+  unitCost     Decimal   @map("unit_cost") @db.Decimal(10, 4)
+  expiresAt    DateTime? @map("expires_at")
+  receivedAt   DateTime  @default(now()) @map("received_at")
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch     Branch     @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([branchId])
+  @@index([ingredientId])
+  @@index([branchId, ingredientId, expiresAt])
+  @@map("inventory_batches")
+}
+
+// --- StockMovement (§25.3 — immutable per §3) ---
+// Every stock change is a permanent append-only record.
+// No soft delete columns — this is an immutable audit ledger.
+model StockMovement {
+  id           String            @id @default(uuid())
+  tenantId     String            @map("tenant_id")
+  branchId     String            @map("branch_id")
+  ingredientId String            @map("ingredient_id")
+  movementType StockMovementType @map("movement_type")
+
+  quantityDelta Decimal @map("quantity_delta") @db.Decimal(10, 4)
+  unitCost      Decimal @map("unit_cost") @db.Decimal(10, 4)
+
+  // Source of movement (order, GRN, manual adjustment, etc.)
+  referenceId   String? @map("reference_id")
+  referenceType String? @map("reference_type")
+  notes         String?
+
+  // Audit Fields — no updatedBy; record is immutable after insert
+  createdAt DateTime @default(now()) @map("created_at")
+  createdBy String?  @map("created_by")
+
+  // Relations
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch     Branch     @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([branchId])
+  @@index([ingredientId])
+  @@index([branchId, ingredientId, createdAt])
+  @@map("stock_movements")
+}
+
+// --- Recipe (§25.3) ---
+// Central transformation matrix. OCC applied (§14).
+model Recipe {
+  id          String  @id @default(uuid())
+  tenantId    String  @map("tenant_id")
+  menuItemId  String? @map("menu_item_id")
+  name        String
+  description String?
+
+  // OCC (§14)
+  version Int @default(1)
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  recipeIngredients RecipeIngredient[]
+
+  @@index([tenantId])
+  @@index([menuItemId])
+  @@map("recipes")
+}
+
+// --- RecipeIngredient (§25.3) ---
+// Associative join table: Recipe ↔ Ingredient.
+// Optional branchId enables branch-level ingredient substitutions per documented rule (§25.3).
+model RecipeIngredient {
+  id           String  @id @default(uuid())
+  tenantId     String  @map("tenant_id")
+  recipeId     String  @map("recipe_id")
+  ingredientId String  @map("ingredient_id")
+  branchId     String? @map("branch_id")
+
+  // Transformation factors (§25.3)
+  quantity     Decimal        @db.Decimal(10, 4)
+  unit         IngredientUnit
+  yieldLossPct Decimal        @default(0) @map("yield_loss_pct") @db.Decimal(5, 4)
+  spoilagePct  Decimal        @default(0) @map("spoilage_pct") @db.Decimal(5, 4)
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  recipe     Recipe     @relation(fields: [recipeId], references: [id], onDelete: Restrict)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  // Note: Partial unique index UNIQUE(recipe_id, ingredient_id, branch_id) WHERE is_deleted = false enforced in migration
+  @@index([tenantId])
+  @@index([recipeId])
+  @@index([ingredientId])
+  @@map("recipe_ingredients")
+}
+
+// --- PurchaseOrder (§25.3 Three-Way Match) ---
+model PurchaseOrder {
+  id         String              @id @default(uuid())
+  tenantId   String              @map("tenant_id")
+  branchId   String              @map("branch_id")
+  supplierId String              @map("supplier_id")
+  status     PurchaseOrderStatus @default(DRAFT)
+  poNumber   String              @map("po_number")
+
+  subtotal   Decimal   @default(0) @db.Decimal(10, 2)
+  taxAmount  Decimal   @default(0) @map("tax_amount") @db.Decimal(10, 2)
+  total      Decimal   @default(0) @db.Decimal(10, 2)
+  orderedAt  DateTime? @map("ordered_at")
+  expectedAt DateTime? @map("expected_at")
+  notes      String?
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch             Branch              @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  supplier           Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  purchaseOrderItems PurchaseOrderItem[]
+  goodsReceipts      GoodsReceipt[]
+
+  // Note: Partial unique index UNIQUE(tenant_id, po_number) WHERE is_deleted = false enforced in migration
+  @@index([tenantId])
+  @@index([branchId])
+  @@index([supplierId])
+  @@index([tenantId, status])
+  @@map("purchase_orders")
+}
+
+// Constituent line items of a Purchase Order
+model PurchaseOrderItem {
+  id              String         @id @default(uuid())
+  tenantId        String         @map("tenant_id")
+  purchaseOrderId String         @map("purchase_order_id")
+  ingredientId    String         @map("ingredient_id")
+  orderedQty      Decimal        @map("ordered_qty") @db.Decimal(10, 4)
+  unit            IngredientUnit
+  unitCost        Decimal        @map("unit_cost") @db.Decimal(10, 4)
+  totalCost       Decimal        @map("total_cost") @db.Decimal(10, 2)
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([purchaseOrderId])
+  @@map("purchase_order_items")
+}
+
+// --- GoodsReceipt (§25.3 Three-Way Match) ---
+model GoodsReceipt {
+  id              String             @id @default(uuid())
+  tenantId        String             @map("tenant_id")
+  branchId        String             @map("branch_id")
+  purchaseOrderId String             @map("purchase_order_id")
+  status          GoodsReceiptStatus @default(PENDING)
+  grnNumber       String             @map("grn_number")
+  receivedAt      DateTime           @default(now()) @map("received_at")
+  notes           String?
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch            Branch             @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  purchaseOrder     PurchaseOrder      @relation(fields: [purchaseOrderId], references: [id], onDelete: Restrict)
+  goodsReceiptItems GoodsReceiptItem[]
+
+  @@index([tenantId])
+  @@index([branchId])
+  @@index([purchaseOrderId])
+  @@map("goods_receipts")
+}
+
+// Constituent line items of a Goods Receipt (Three-Way Match line level)
+model GoodsReceiptItem {
+  id             String         @id @default(uuid())
+  tenantId       String         @map("tenant_id")
+  goodsReceiptId String         @map("goods_receipt_id")
+  ingredientId   String         @map("ingredient_id")
+  receivedQty    Decimal        @map("received_qty") @db.Decimal(10, 4)
+  acceptedQty    Decimal        @map("accepted_qty") @db.Decimal(10, 4)
+  rejectedQty    Decimal        @default(0) @map("rejected_qty") @db.Decimal(10, 4)
+  unit           IngredientUnit
+  unitCost       Decimal        @map("unit_cost") @db.Decimal(10, 4)
+  notes          String?
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  goodsReceipt GoodsReceipt @relation(fields: [goodsReceiptId], references: [id], onDelete: Restrict)
+  ingredient   Ingredient   @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([goodsReceiptId])
+  @@index([ingredientId])
+  @@map("goods_receipt_items")
+}
+
+// ==========================================
+// FINANCE MODELS (Task 1.3)
+// ==========================================
+
+// --- LedgerAccount (§25.6 Chart of Accounts — hierarchical) ---
+model LedgerAccount {
+  id       String            @id @default(uuid())
+  tenantId String            @map("tenant_id")
+  parentId String?           @map("parent_id")
+  code     String
+  name     String
+  type     LedgerAccountType
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  parent         LedgerAccount?  @relation("LedgerAccountHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children       LedgerAccount[] @relation("LedgerAccountHierarchy")
+  journalEntries JournalEntry[]
+
+  // Note: Partial unique index UNIQUE(tenant_id, code) WHERE is_deleted = false enforced in migration
+  @@index([tenantId])
+  @@index([parentId])
+  @@map("ledger_accounts")
+}
+
+// --- Shift (§25.6) ---
+// Operational session boundary. A Branch cannot sell without an open Shift.
+model Shift {
+  id       String      @id @default(uuid())
+  tenantId String      @map("tenant_id")
+  branchId String      @map("branch_id")
+  userId   String      @map("user_id")
+  status   ShiftStatus @default(OPEN)
+
+  openedAt     DateTime  @default(now()) @map("opened_at")
+  closedAt     DateTime? @map("closed_at")
+  openingFloat Decimal   @default(0) @map("opening_float") @db.Decimal(10, 2)
+  closingFloat Decimal?  @map("closing_float") @db.Decimal(10, 2)
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch      Branch       @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  cashDrawers CashDrawer[]
+  journals    Journal[]
+
+  @@index([tenantId])
+  @@index([branchId])
+  @@index([branchId, status])
+  @@map("shifts")
+}
+
+// --- CashDrawer (§25.6) ---
+// Physical till associated with a Shift.
+model CashDrawer {
+  id       String @id @default(uuid())
+  tenantId String @map("tenant_id")
+  branchId String @map("branch_id")
+  shiftId  String @map("shift_id")
+  name     String
+
+  openingBalance Decimal  @default(0) @map("opening_balance") @db.Decimal(10, 2)
+  closingBalance Decimal? @map("closing_balance") @db.Decimal(10, 2)
+  isOpen         Boolean  @default(true) @map("is_open")
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  shift  Shift  @relation(fields: [shiftId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([branchId])
+  @@index([shiftId])
+  @@map("cash_drawers")
+}
+
+// --- DailyClosing (§25.6) ---
+// Period-end reconciliation snapshot. Status LOCKED enforces immutability (§3).
+// Reopening a LOCKED day requires elevated Controller permissions (§25.6).
+model DailyClosing {
+  id          String             @id @default(uuid())
+  tenantId    String             @map("tenant_id")
+  branchId    String             @map("branch_id")
+  closingDate DateTime           @map("closing_date") @db.Date
+  status      DailyClosingStatus @default(PENDING)
+
+  expectedCash Decimal @default(0) @map("expected_cash") @db.Decimal(10, 2)
+  actualCash   Decimal @default(0) @map("actual_cash") @db.Decimal(10, 2)
+  variance     Decimal @default(0) @db.Decimal(10, 2)
+  totalRevenue Decimal @default(0) @map("total_revenue") @db.Decimal(10, 2)
+  notes        String?
+
+  lockedAt DateTime? @map("locked_at")
+  lockedBy String?   @map("locked_by")
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete (§17 — status LOCKED is the immutability gate; soft delete also protected)
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
+  // Note: Partial unique index UNIQUE(branch_id, closing_date) WHERE is_deleted = false enforced in migration
+  @@index([tenantId])
+  @@index([branchId])
+  @@index([branchId, closingDate])
+  @@map("daily_closings")
+}
+
+// --- Invoice (§25.6 — immutable once status = PAID per §3) ---
+model Invoice {
+  id       String        @id @default(uuid())
+  tenantId String        @map("tenant_id")
+  branchId String        @map("branch_id")
+  orderId  String        @map("order_id")
+  status   InvoiceStatus @default(DRAFT)
+
+  // Immutable after PAID (§3)
+  subtotal  Decimal @default(0) @db.Decimal(10, 2)
+  taxAmount Decimal @default(0) @map("tax_amount") @db.Decimal(10, 2)
+  total     Decimal @default(0) @db.Decimal(10, 2)
+
+  issuedAt DateTime? @map("issued_at")
+  dueAt    DateTime? @map("due_at")
+  notes    String?
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch   Branch    @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  payments Payment[]
+  refunds  Refund[]
+
+  @@index([tenantId])
+  @@index([branchId])
+  @@index([orderId])
+  @@index([tenantId, status])
+  @@map("invoices")
+}
+
+// --- Payment (§25.6 — state machine: Initiated → Authorized → Captured) ---
+model Payment {
+  id        String        @id @default(uuid())
+  tenantId  String        @map("tenant_id")
+  invoiceId String        @map("invoice_id")
+  status    PaymentStatus @default(INITIATED)
+  method    PaymentMethod
+
+  amount        Decimal @db.Decimal(10, 2)
+  referenceCode String? @map("reference_code")
+
+  // Gateway response stored as JSONB (do NOT log sensitive PAN/CVV per §20)
+  gatewayPayload Json? @map("gateway_payload")
+
+  // Idempotency key for gateway retries (§13)
+  idempotencyKey String @unique @map("idempotency_key")
+
+  capturedAt DateTime? @map("captured_at")
+  notes      String?
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  invoice Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  refunds Refund[]
+  Tenant  Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([invoiceId])
+  @@index([tenantId, status])
+  @@map("payments")
+}
+
+// --- Refund (§25.6 — counter-transaction per §3; never mutates Payment) ---
+// Each refund is a new, distinct financial record. Corrections via counter-journals (§25.6).
+model Refund {
+  id        String       @id @default(uuid())
+  tenantId  String       @map("tenant_id")
+  invoiceId String       @map("invoice_id")
+  paymentId String       @map("payment_id")
+  status    RefundStatus @default(PENDING)
+
+  amount Decimal @db.Decimal(10, 2)
+  reason String
+  notes  String?
+
+  // Elevated permission required for closed-period refunds (§25.6)
+  approvedBy String?   @map("approved_by")
+  approvedAt DateTime? @map("approved_at")
+
+  // Idempotency key (§13)
+  idempotencyKey String @unique @map("idempotency_key")
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  Tenant  Tenant  @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([invoiceId])
+  @@index([paymentId])
+  @@map("refunds")
+}
+
+// --- Journal (§25.6 Double-Entry Accounting) ---
+// Immutable once posted. Corrections via counter-journals only (§25.6).
+model Journal {
+  id            String  @id @default(uuid())
+  tenantId      String  @map("tenant_id")
+  shiftId       String? @map("shift_id")
+  description   String
+  referenceId   String? @map("reference_id")
+  referenceType String? @map("reference_type")
+
+  isPosted Boolean   @default(false) @map("is_posted")
+  postedAt DateTime? @map("posted_at")
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete (only permitted before posting)
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  shift          Shift?         @relation(fields: [shiftId], references: [id], onDelete: Restrict)
+  journalEntries JournalEntry[]
+
+  @@index([tenantId])
+  @@index([shiftId])
+  @@index([tenantId, isPosted])
+  @@map("journals")
+}
+
+// --- JournalEntry (§25.6 — individual debit/credit lines; immutable once journal is posted) ---
+model JournalEntry {
+  id              String           @id @default(uuid())
+  tenantId        String           @map("tenant_id")
+  journalId       String           @map("journal_id")
+  ledgerAccountId String           @map("ledger_account_id")
+  entryType       JournalEntryType @map("entry_type")
+  amount          Decimal          @db.Decimal(10, 2)
+  description     String?
+
+  // Audit Fields — no updatedBy; lines are immutable once journal is posted
+  createdAt DateTime @default(now()) @map("created_at")
+  createdBy String?  @map("created_by")
+
+  // Relations
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  journal       Journal       @relation(fields: [journalId], references: [id], onDelete: Restrict)
+  ledgerAccount LedgerAccount @relation(fields: [ledgerAccountId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([journalId])
+  @@index([ledgerAccountId])
+  @@map("journal_entries")
 }
