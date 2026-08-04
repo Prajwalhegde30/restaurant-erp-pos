@@ -5,7 +5,7 @@ import globals from 'globals';
 
 export default tseslint.config(
   {
-    ignores: ["**/node_modules/**", "**/dist/**", "**/.next/**", "**/coverage/**"]
+    ignores: ['**/node_modules/**', '**/dist/**', '**/.next/**', '**/coverage/**'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
@@ -14,8 +14,8 @@ export default tseslint.config(
     languageOptions: {
       globals: {
         ...globals.browser,
-        ...globals.node
-      }
-    }
-  }
+        ...globals.node,
+      },
+    },
+  },
 );

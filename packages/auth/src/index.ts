@@ -13,6 +13,17 @@
  *   - Service: signAccessToken, signRefreshToken, signTokenPair,
  *              verifyAccessToken, verifyRefreshToken
  *
+ * Task 2.2 Exports — RBAC Matrix Logic:
+ *   - Types: PermissionScope, PermissionEffect, AuthorizationDecision,
+ *            PermissionGrant, RoleDefinition, UserRoleAssignment,
+ *            UserPermissionOverride, RbacMatrix, EvaluationContext,
+ *            PermissionEvaluationResult
+ *   - Errors: AuthorizationError, CrossTenantViolationError,
+ *             BranchScopeViolationError, PermissionDeniedError,
+ *             CircularInheritanceError
+ *   - Service: evaluatePermissions, assertPermission, resolveRoleInheritance,
+ *              isTemporalGrantActive, isScopeSufficient
+ *
  * Authority:
  *   Architecture.md §5.3 — @repo/auth: "Shared JWT validation, RBAC evaluation
  *     logic, and permission matrices."
@@ -22,7 +33,7 @@
  *     jwt directly — they use this package.
  */
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Task 2.1: JWT Authentication Types & Service ────────────────────────────
 export type {
   JwtAccessPayload,
   JwtRefreshPayload,
@@ -31,7 +42,6 @@ export type {
   JwtConfig,
 } from './types.js';
 
-// ─── Errors ──────────────────────────────────────────────────────────────────
 export {
   AuthError,
   TokenInvalidError,
@@ -40,10 +50,8 @@ export {
   JwtConfigurationError,
 } from './errors.js';
 
-// ─── Configuration ───────────────────────────────────────────────────────────
 export { loadJwtConfig } from './config.js';
 
-// ─── Token Service ───────────────────────────────────────────────────────────
 export {
   signAccessToken,
   signRefreshToken,
@@ -51,3 +59,33 @@ export {
   verifyAccessToken,
   verifyRefreshToken,
 } from './tokenService.js';
+
+// ─── Task 2.2: RBAC Matrix Types, Errors & Evaluation Engine ─────────────────
+export type {
+  PermissionScope,
+  PermissionEffect,
+  AuthorizationDecision,
+  PermissionGrant,
+  RoleDefinition,
+  UserRoleAssignment,
+  UserPermissionOverride,
+  RbacMatrix,
+  EvaluationContext,
+  PermissionEvaluationResult,
+} from './rbac.types.js';
+
+export {
+  AuthorizationError,
+  CrossTenantViolationError,
+  BranchScopeViolationError,
+  PermissionDeniedError,
+  CircularInheritanceError,
+} from './rbac.errors.js';
+
+export {
+  evaluatePermissions,
+  assertPermission,
+  resolveRoleInheritance,
+  isTemporalGrantActive,
+  isScopeSufficient,
+} from './rbacService.js';
