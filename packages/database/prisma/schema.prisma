@@ -1,9 +1,3 @@
-// This is the Prisma schema file for the Restaurant ERP + POS SaaS platform.
-// Reference: docs/DatabaseSchema.md (v1.0.0-DBA) + docs/Architecture.md (v1.2.0-ARCH)
-//
-// This file is the Single Source of Truth for the database model.
-// All business entities will be added in subsequent phase tasks.
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,4 +5,921 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// ENUMS
+// ==========================================
+
+// --- IAM / Platform ---
+
+enum TenantStatus {
+  CREATED
+  ACTIVE
+  SUSPENDED
+}
+
+enum PermissionScope {
+  OWN
+  BRANCH
+  TENANT
+  ANY
+}
+
+// --- Catalog ---
+
+enum MenuStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum CategoryStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum MenuItemStatus {
+  ACTIVE
+  INACTIVE
+  OUT_OF_STOCK
+}
+
+enum ComboStatus {
+  ACTIVE
+  INACTIVE
+}
+
+// --- Ordering / Operational ---
+
+enum TableStatus {
+  AVAILABLE
+  SEATED
+  BILLED
+  RESERVED
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  SEATED
+  CANCELLED
+  NO_SHOW
+}
+
+enum OrderStatus {
+  DRAFT
+  PLACED
+  IN_PREP
+  READY
+  SERVED
+  PAID
+  CLOSED
+  VOIDED
+  CANCELLED
+}
+
+enum OrderType {
+  DINE_IN
+  TAKEAWAY
+  DELIVERY
+}
+
+enum OrderItemStatus {
+  PENDING
+  IN_PREP
+  READY
+  SERVED
+  VOIDED
+}
+
+// ==========================================
+// PLATFORM FOUNDATION MODELS
+// ==========================================
+
+model Tenant {
+  id     String       @id @default(uuid())
+  name   String
+  status TenantStatus @default(ACTIVE)
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  branches               Branch[]
+  users                  User[]
+  roles                  Role[]
+  permissions            Permission[]
+  userRoles              UserRole[]
+  branchAssignments      BranchAssignment[]
+  menus                  Menu[]
+  categories             Category[]
+  menuItems              MenuItem[]
+  modifierGroups         ModifierGroup[]
+  modifierOptions        ModifierOption[]
+  menuItemModifierGroups MenuItemModifierGroup[]
+  combos                 Combo[]
+  comboItems             ComboItem[]
+  diningTables           DiningTable[]
+  reservations           Reservation[]
+  orders                 Order[]
+  orderItems             OrderItem[]
+  orderMerges            OrderMerge[]
+
+  @@map("tenants")
+}
+
+model Branch {
+  id       String @id @default(uuid())
+  tenantId String @map("tenant_id")
+  name     String
+
+  // Configuration
+  taxConfig Json?  @map("tax_config")
+  timezone  String @default("UTC")
+  currency  String @default("USD")
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  userRoles         UserRole[]
+  branchAssignments BranchAssignment[]
+  menuBranches      MenuBranch[]
+  diningTables      DiningTable[]
+  reservations      Reservation[]
+  orders            Order[]
+
+  @@index([tenantId])
+  @@map("branches")
+}
+
+model User {
+  id        String  @id @default(uuid())
+  tenantId  String  @map("tenant_id")
+  email     String
+  firstName String  @map("first_name")
+  lastName  String  @map("last_name")
+  pin       String?
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  userRoles         UserRole[]
+  branchAssignments BranchAssignment[]
+  orders            Order[]
+  reservations      Reservation[]
+
+  // Note: Partial unique index (tenant_id, email) WHERE is_deleted = false enforced in migration
+  @@index([tenantId])
+  @@map("users")
+}
+
+model Role {
+  id       String  @id @default(uuid())
+  tenantId String  @map("tenant_id")
+  parentId String? @map("parent_id")
+  name     String
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  parent      Role?        @relation("RoleHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children    Role[]       @relation("RoleHierarchy")
+  permissions Permission[]
+  userRoles   UserRole[]
+
+  @@index([tenantId])
+  @@map("roles")
+}
+
+model Permission {
+  id           String          @id @default(uuid())
+  tenantId     String          @map("tenant_id")
+  roleId       String          @map("role_id")
+  module       String
+  resource     String
+  action       String
+  scope        PermissionScope @default(BRANCH)
+  thresholdKey String?         @map("threshold_key")
+  isDeny       Boolean         @default(false) @map("is_deny")
+
+  // Temporal Binding
+  effectiveFrom  DateTime? @map("effective_from")
+  effectiveUntil DateTime? @map("effective_until")
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([roleId])
+  @@map("permissions")
+}
+
+model UserRole {
+  id       String  @id @default(uuid())
+  tenantId String  @map("tenant_id")
+  userId   String  @map("user_id")
+  roleId   String  @map("role_id")
+  branchId String? @map("branch_id")
+
+  // Temporal Binding
+  effectiveFrom  DateTime? @map("effective_from")
+  effectiveUntil DateTime? @map("effective_until")
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  role   Role    @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([roleId])
+  @@index([branchId])
+  @@map("user_roles")
+}
+
+model BranchAssignment {
+  id       String @id @default(uuid())
+  tenantId String @map("tenant_id")
+  userId   String @map("user_id")
+  branchId String @map("branch_id")
+
+  // Temporal Binding
+  effectiveFrom  DateTime? @map("effective_from")
+  effectiveUntil DateTime? @map("effective_until")
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([branchId])
+  // Note: Partial unique index UNIQUE(user_id, branch_id) WHERE is_deleted = false enforced in migration
+  @@map("branch_assignments")
+}
+
+// ==========================================
+// CATALOG MODELS
+// ==========================================
+
+// --- Menu (AD-001: current state only; history stored in menu_versions) ---
+
+model Menu {
+  id          String     @id @default(uuid())
+  tenantId    String     @map("tenant_id")
+  name        String
+  description String?
+  status      MenuStatus @default(DRAFT)
+
+  // Optimistic Concurrency Control (DatabaseSchema.md §14)
+  version Int @default(1)
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  menuVersions MenuVersion[]
+  menuBranches MenuBranch[]
+  categories   Category[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@map("menus")
+}
+
+// AD-001: Separate append-only history table capturing every mutation of a Menu row.
+// The menus table always holds current state; menu_versions is the immutable historical log.
+model MenuVersion {
+  id       String @id @default(uuid())
+  tenantId String @map("tenant_id")
+  menuId   String @map("menu_id")
+
+  // Snapshot of the menus row at the moment this version was captured
+  name        String
+  description String?
+  status      MenuStatus
+  version     Int
+
+  // Timestamp of when this version was recorded
+  recordedAt DateTime @default(now()) @map("recorded_at")
+  recordedBy String?  @map("recorded_by")
+
+  // Relations
+  // No tenant relation needed here to avoid circular back-relation confusion;
+  // tenantId is present for isolation per §7.
+  menu Menu @relation(fields: [menuId], references: [id], onDelete: Restrict)
+
+  @@index([menuId])
+  @@index([tenantId, menuId])
+  @@map("menu_versions")
+}
+
+// Associative join table: Menu ↔ Branch assignment (many-to-many per §8)
+model MenuBranch {
+  id       String @id @default(uuid())
+  tenantId String @map("tenant_id")
+  menuId   String @map("menu_id")
+  branchId String @map("branch_id")
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  menu   Menu   @relation(fields: [menuId], references: [id], onDelete: Restrict)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
+  // Note: Partial unique index UNIQUE(menu_id, branch_id) WHERE is_deleted = false enforced in migration
+  @@index([tenantId])
+  @@index([menuId])
+  @@index([branchId])
+  @@map("menu_branches")
+}
+
+// --- Category (hierarchical/recursive per §8) ---
+
+model Category {
+  id          String         @id @default(uuid())
+  tenantId    String         @map("tenant_id")
+  menuId      String         @map("menu_id")
+  parentId    String?        @map("parent_id")
+  name        String
+  description String?
+  sortOrder   Int            @default(0) @map("sort_order")
+  status      CategoryStatus @default(ACTIVE)
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  menu      Menu       @relation(fields: [menuId], references: [id], onDelete: Restrict)
+  parent    Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children  Category[] @relation("CategoryHierarchy")
+  menuItems MenuItem[]
+
+  @@index([tenantId])
+  @@index([menuId])
+  @@index([parentId])
+  @@map("categories")
+}
+
+// --- MenuItem ---
+
+model MenuItem {
+  id          String         @id @default(uuid())
+  tenantId    String         @map("tenant_id")
+  categoryId  String         @map("category_id")
+  name        String
+  description String?
+  price       Decimal        @db.Decimal(10, 2)
+  taxRate     Decimal        @default(0) @map("tax_rate") @db.Decimal(5, 4)
+  sortOrder   Int            @default(0) @map("sort_order")
+  status      MenuItemStatus @default(ACTIVE)
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant                 Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  category               Category                @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  menuItemModifierGroups MenuItemModifierGroup[]
+  comboItems             ComboItem[]
+  orderItems             OrderItem[]
+
+  @@index([tenantId])
+  @@index([categoryId])
+  @@index([tenantId, status])
+  @@map("menu_items")
+}
+
+// --- ModifierGroup (AD-002: two-table model) ---
+
+model ModifierGroup {
+  id            String  @id @default(uuid())
+  tenantId      String  @map("tenant_id")
+  name          String
+  minSelections Int     @default(0) @map("min_selections")
+  maxSelections Int     @default(1) @map("max_selections")
+  isRequired    Boolean @default(false) @map("is_required")
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant                 Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  modifierOptions        ModifierOption[]
+  menuItemModifierGroups MenuItemModifierGroup[]
+
+  @@index([tenantId])
+  @@map("modifier_groups")
+}
+
+// AD-002: Selectable options within a modifier group.
+// Ingredient link intentionally omitted — deferred to Supply Chain bounded context (Phase 7).
+model ModifierOption {
+  id              String  @id @default(uuid())
+  tenantId        String  @map("tenant_id")
+  modifierGroupId String  @map("modifier_group_id")
+  name            String
+  priceDelta      Decimal @default(0) @map("price_delta") @db.Decimal(10, 2)
+  sortOrder       Int     @default(0) @map("sort_order")
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant                      Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  modifierGroup               ModifierGroup                @relation(fields: [modifierGroupId], references: [id], onDelete: Restrict)
+  orderItemModifierSelections OrderItemModifierSelection[]
+
+  @@index([tenantId])
+  @@index([modifierGroupId])
+  @@map("modifier_options")
+}
+
+// AD-003: Associative join table — MenuItem ↔ ModifierGroup (many-to-many per §8).
+// Modifier groups are reusable tenant-level resources; this table links them to items.
+model MenuItemModifierGroup {
+  id              String @id @default(uuid())
+  tenantId        String @map("tenant_id")
+  menuItemId      String @map("menu_item_id")
+  modifierGroupId String @map("modifier_group_id")
+  sortOrder       Int    @default(0) @map("sort_order")
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  menuItem      MenuItem      @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+  modifierGroup ModifierGroup @relation(fields: [modifierGroupId], references: [id], onDelete: Restrict)
+
+  // Note: Partial unique index UNIQUE(menu_item_id, modifier_group_id) WHERE is_deleted = false enforced in migration
+  @@index([tenantId])
+  @@index([menuItemId])
+  @@index([modifierGroupId])
+  @@map("menu_item_modifier_groups")
+}
+
+// --- Combo (bundled pricing mechanism per §25.2) ---
+
+model Combo {
+  id          String      @id @default(uuid())
+  tenantId    String      @map("tenant_id")
+  name        String
+  description String?
+  price       Decimal     @db.Decimal(10, 2)
+  taxRate     Decimal     @default(0) @map("tax_rate") @db.Decimal(5, 4)
+  status      ComboStatus @default(ACTIVE)
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  comboItems ComboItem[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@map("combos")
+}
+
+// Associative join table: Combo ↔ MenuItem (many-to-many per §8).
+// Combos physically decompose into constituent items for COGS accounting (§25.2).
+model ComboItem {
+  id         String @id @default(uuid())
+  tenantId   String @map("tenant_id")
+  comboId    String @map("combo_id")
+  menuItemId String @map("menu_item_id")
+  quantity   Int    @default(1)
+  sortOrder  Int    @default(0) @map("sort_order")
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  combo    Combo    @relation(fields: [comboId], references: [id], onDelete: Restrict)
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+
+  // Note: Partial unique index UNIQUE(combo_id, menu_item_id) WHERE is_deleted = false enforced in migration
+  @@index([tenantId])
+  @@index([comboId])
+  @@index([menuItemId])
+  @@map("combo_items")
+}
+
+// ==========================================
+// OPERATIONAL / ORDERING MODELS
+// ==========================================
+
+// --- DiningTable (§25.4) ---
+
+model DiningTable {
+  id           String      @id @default(uuid())
+  tenantId     String      @map("tenant_id")
+  branchId     String      @map("branch_id")
+  tableNumber  String      @map("table_number")
+  capacity     Int         @default(2)
+  status       TableStatus @default(AVAILABLE)
+  floorSection String?     @map("floor_section")
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch       Branch        @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  reservations Reservation[]
+  orders       Order[]
+
+  // Note: Partial unique index UNIQUE(branch_id, table_number) WHERE is_deleted = false enforced in migration
+  @@index([tenantId])
+  @@index([branchId])
+  @@index([branchId, status])
+  @@map("dining_tables")
+}
+
+// --- Reservation (§25.4) ---
+
+model Reservation {
+  id            String            @id @default(uuid())
+  tenantId      String            @map("tenant_id")
+  branchId      String            @map("branch_id")
+  diningTableId String?           @map("dining_table_id")
+  userId        String?           @map("user_id")
+  guestName     String            @map("guest_name")
+  guestPhone    String?           @map("guest_phone")
+  partySize     Int               @map("party_size")
+  scheduledAt   DateTime          @map("scheduled_at")
+  status        ReservationStatus @default(PENDING)
+  notes         String?
+
+  // Overbooking is allowed based on tenant policy threshold (§25.4)
+  // Policy enforcement is application-layer; schema records actual bookings.
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch      Branch       @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  diningTable DiningTable? @relation(fields: [diningTableId], references: [id], onDelete: Restrict)
+  user        User?        @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([branchId])
+  @@index([diningTableId])
+  @@index([branchId, scheduledAt])
+  @@index([branchId, status])
+  @@map("reservations")
+}
+
+// --- Order (§25.4, §13, §14 OCC, AD-005 parent-child hierarchy) ---
+
+model Order {
+  id            String      @id @default(uuid())
+  tenantId      String      @map("tenant_id")
+  branchId      String      @map("branch_id")
+  diningTableId String?     @map("dining_table_id")
+  userId        String?     @map("user_id")
+  status        OrderStatus @default(DRAFT)
+  orderType     OrderType   @default(DINE_IN) @map("order_type")
+
+  // AD-005: Self-referencing FK for table merge parent-child hierarchy.
+  // parentOrderId is null for all standalone and child orders that have no parent.
+  // A parent order (created on merge) also has parentOrderId = null; its children point to it.
+  parentOrderId String? @map("parent_order_id")
+
+  // Idempotency key for offline POS sync (§13)
+  idempotencyKey String @unique @map("idempotency_key")
+
+  // Optimistic Concurrency Control (§14) — clients must pass known version
+  version Int @default(1)
+
+  // Financial totals (denormalised for performance; source of truth remains order_items)
+  subtotal    Decimal @default(0) @map("subtotal") @db.Decimal(10, 2)
+  taxAmount   Decimal @default(0) @map("tax_amount") @db.Decimal(10, 2)
+  totalAmount Decimal @default(0) @map("total_amount") @db.Decimal(10, 2)
+
+  notes String?
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch      Branch       @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  diningTable DiningTable? @relation(fields: [diningTableId], references: [id], onDelete: Restrict)
+  user        User?        @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  // AD-005: Parent-child order hierarchy for table merges
+  parentOrder Order?  @relation("OrderMergeHierarchy", fields: [parentOrderId], references: [id], onDelete: Restrict)
+  childOrders Order[] @relation("OrderMergeHierarchy")
+
+  // Child records whose lifecycle is dictated by the order (ON DELETE Restrict per §11 for safety)
+  orderItems          OrderItem[]
+  orderMergesAsParent OrderMerge[] @relation("ParentOrder")
+  orderMergesAsChild  OrderMerge[] @relation("ChildOrder")
+
+  @@index([tenantId])
+  @@index([branchId])
+  @@index([diningTableId])
+  @@index([tenantId, branchId, status])
+  @@index([tenantId, branchId, status, createdAt])
+  @@index([parentOrderId])
+  @@map("orders")
+}
+
+// AD-005: Associative transaction table recording table merge events per §25.4.
+// Records which child orders are grouped under which parent order.
+model OrderMerge {
+  id            String @id @default(uuid())
+  tenantId      String @map("tenant_id")
+  parentOrderId String @map("parent_order_id")
+  childOrderId  String @map("child_order_id")
+
+  mergedAt   DateTime  @default(now()) @map("merged_at")
+  mergedBy   String?   @map("merged_by")
+  resolvedAt DateTime? @map("resolved_at")
+  resolvedBy String?   @map("resolved_by")
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant      Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  parentOrder Order  @relation("ParentOrder", fields: [parentOrderId], references: [id], onDelete: Restrict)
+  childOrder  Order  @relation("ChildOrder", fields: [childOrderId], references: [id], onDelete: Restrict)
+
+  // Note: Partial unique index UNIQUE(child_order_id) WHERE is_deleted = false enforced in migration
+  // (a child order can only belong to one active merge group at a time)
+  @@index([tenantId])
+  @@index([parentOrderId])
+  @@index([childOrderId])
+  @@map("order_merges")
+}
+
+// --- OrderItem (§25.4, §18 snapshot at creation time) ---
+
+model OrderItem {
+  id         String          @id @default(uuid())
+  tenantId   String          @map("tenant_id")
+  orderId    String          @map("order_id")
+  menuItemId String          @map("menu_item_id")
+  status     OrderItemStatus @default(PENDING)
+  quantity   Int             @default(1)
+
+  // Price snapshot at moment of order creation (§18 — immutable after write)
+  unitPrice  Decimal @map("unit_price") @db.Decimal(10, 2)
+  taxRate    Decimal @map("tax_rate") @db.Decimal(5, 4)
+  totalPrice Decimal @map("total_price") @db.Decimal(10, 2)
+
+  notes String?
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant                      Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  order                       Order                        @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  menuItem                    MenuItem                     @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+  orderItemModifierSelections OrderItemModifierSelection[]
+  orderItemRecipeSnapshots    OrderItemRecipeSnapshot[]
+
+  @@index([tenantId])
+  @@index([orderId])
+  @@index([menuItemId])
+  @@index([tenantId, status])
+  @@map("order_items")
+}
+
+// Associative join table: OrderItem ↔ ModifierOption selections (many-to-many per §8).
+// Records the exact modifier option chosen and the price delta snapshotted at selection time.
+model OrderItemModifierSelection {
+  id               String @id @default(uuid())
+  tenantId         String @map("tenant_id")
+  orderItemId      String @map("order_item_id")
+  modifierOptionId String @map("modifier_option_id")
+
+  // Price snapshot at moment of selection (§18 immutability — override may differ from live priceDelta)
+  priceDeltaSnapshot Decimal @map("price_delta_snapshot") @db.Decimal(10, 2)
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  orderItem      OrderItem      @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
+  modifierOption ModifierOption @relation(fields: [modifierOptionId], references: [id], onDelete: Restrict)
+
+  @@index([orderItemId])
+  @@index([modifierOptionId])
+  @@map("order_item_modifier_selections")
+}
+
+// AD-004: Separate relational snapshot table for recipe state at order creation time.
+// Append-only after INSERT. One row per ingredient line per order item.
+// This table is the authoritative record for COGS, inventory deduction (Phase 7), and financial audit.
+// Ingredient FK deferred to Task 1.3 (Supply Chain); ingredientId stored as raw UUID for now.
+model OrderItemRecipeSnapshot {
+  id          String @id @default(uuid())
+  orderItemId String @map("order_item_id")
+
+  // Recipe identity at snapshot time
+  recipeId   String? @map("recipe_id")
+  recipeName String  @map("recipe_name")
+
+  // Ingredient line captured at order time (ingredient entity belongs to Task 1.3 Supply Chain)
+  ingredientId   String  @map("ingredient_id")
+  ingredientName String  @map("ingredient_name")
+  quantity       Decimal @db.Decimal(10, 4)
+  unit           String
+
+  // Yield loss and spoilage factors at snapshot time (§25.3)
+  yieldLossPct Decimal @default(0) @map("yield_loss_pct") @db.Decimal(5, 4)
+  spoilagePct  Decimal @default(0) @map("spoilage_pct") @db.Decimal(5, 4)
+
+  // Captured timestamp — when this snapshot row was written
+  capturedAt DateTime @default(now()) @map("captured_at")
+
+  // Relations
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
+
+  @@index([orderItemId])
+  @@index([ingredientId])
+  @@map("order_item_recipe_snapshots")
 }
