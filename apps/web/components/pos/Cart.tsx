@@ -4,19 +4,39 @@ import { usePosStore } from '../../store/posStore';
 import { useCreateOrder } from '../../hooks/useOrders';
 import { Button, Card, CardContent, CardHeader, CardTitle, CardFooter } from '@repo/ui';
 import { PaymentDialog } from './PaymentDialog';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export function Cart({ branchId }: { branchId: string }) {
-  const { activeTableId, activeOrderId, cartItems, removeItem, updateQuantity, clearCart } =
-    usePosStore();
+  const {
+    activeTableId,
+    activeOrderId,
+    activeOrderVersion,
+    activeOrderTotal,
+    cartItems,
+    removeItem,
+    updateQuantity,
+    clearCart,
+  } = usePosStore();
   const createOrderMutation = useCreateOrder();
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  // Auto-clear success message
+  useEffect(() => {
+    if (success) {
+      const t = setTimeout(() => setSuccess(null), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [success]);
 
   if (!activeTableId) return null;
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const tax = subtotal * 0.1; // Simulated 10% tax
-  const total = subtotal + tax;
+  const estimatedTax = subtotal * 0.1; // Simulated 10% tax
+  const estimatedTotal = subtotal + estimatedTax;
+
+  const displayTotal = activeOrderTotal !== null ? activeOrderTotal : estimatedTotal;
 
   const handleFire = () => {
     if (cartItems.length === 0) return;
@@ -37,10 +57,12 @@ export function Cart({ branchId }: { branchId: string }) {
       {
         onSuccess: () => {
           clearCart();
-          alert('Order fired successfully!');
+          setError(null);
+          setSuccess('Order fired successfully!');
         },
         onError: (err: Error) => {
-          alert(`Failed to fire order: ${err.message || 'Unknown error'}`);
+          setError(`Failed to fire order: ${err.message || 'Unknown error'}`);
+          setSuccess(null);
         },
       },
     );
@@ -110,14 +132,17 @@ export function Cart({ branchId }: { branchId: string }) {
             <span>${subtotal.toFixed(2)}</span>
           </div>
           <div className="flex justify-between text-muted-foreground">
-            <span>Tax (10%)</span>
-            <span>${tax.toFixed(2)}</span>
+            <span>Estimated Tax (10%)</span>
+            <span>${estimatedTax.toFixed(2)}</span>
           </div>
           <div className="flex justify-between font-bold text-lg pt-2 border-t mt-1">
-            <span>Total</span>
-            <span>${total.toFixed(2)}</span>
+            <span>{activeOrderTotal !== null ? 'Order Total' : 'Estimated Total'}</span>
+            <span>${displayTotal.toFixed(2)}</span>
           </div>
         </div>
+
+        {error && <div className="text-sm text-destructive text-center w-full">{error}</div>}
+        {success && <div className="text-sm text-green-600 text-center w-full">{success}</div>}
 
         <div className="flex flex-col gap-2 w-full">
           <Button
@@ -141,10 +166,11 @@ export function Cart({ branchId }: { branchId: string }) {
         </div>
       </CardFooter>
 
-      {isPaymentOpen && (
+      {isPaymentOpen && activeOrderId && (
         <PaymentDialog
-          orderId={activeOrderId || 'mock-id'}
-          amount={total}
+          orderId={activeOrderId}
+          amount={activeOrderTotal || 0}
+          currentVersion={activeOrderVersion || 1}
           onClose={() => setIsPaymentOpen(false)}
         />
       )}

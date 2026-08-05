@@ -34,7 +34,14 @@ export function TableMap({ branchId }: { branchId: string }) {
               isSelected ? 'ring-2 ring-primary border-primary' : '',
               isOccupied ? 'bg-amber-50 dark:bg-amber-950/20' : 'bg-card',
             )}
-            onClick={() => setActiveTable(table.id, activeOrder?.id)}
+            onClick={() =>
+              setActiveTable(
+                table.id,
+                activeOrder?.id,
+                activeOrder?.version,
+                activeOrder?.totalAmount,
+              )
+            }
           >
             <CardContent className="p-6 flex flex-col items-center justify-center min-h-[120px]">
               <h3 className="font-bold text-lg mb-2">{table.name}</h3>

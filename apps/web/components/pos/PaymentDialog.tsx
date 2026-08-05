@@ -7,13 +7,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button 
 export function PaymentDialog({
   orderId,
   amount,
+  currentVersion,
   onClose,
 }: {
   orderId: string;
   amount: number;
+  currentVersion: number;
   onClose: () => void;
 }) {
   const [method, setMethod] = useState<'CASH' | 'CARD' | 'UPI' | 'OTHER'>('CARD');
+  const [error, setError] = useState<string | null>(null);
   const processPaymentMutation = useProcessPayment();
 
   const handleSettle = () => {
@@ -22,15 +25,15 @@ export function PaymentDialog({
         orderId,
         amount,
         paymentMethod: method,
-        currentVersion: 1, // In a real app, this should come from the fetched order data
+        currentVersion,
       },
       {
         onSuccess: () => {
-          alert('Payment processed successfully!');
-          onClose();
+          setError(null);
+          onClose(); // In a real app, maybe show a success toast before closing
         },
         onError: (err: Error) => {
-          alert(`Payment failed: ${err.message || 'Unknown error'}`);
+          setError(`Payment failed: ${err.message || 'Unknown error'}`);
         },
       },
     );
@@ -78,6 +81,8 @@ export function PaymentDialog({
             Other
           </Button>
         </div>
+
+        {error && <div className="text-sm text-destructive text-center w-full px-4">{error}</div>}
 
         <DialogFooter className="sm:justify-between">
           <Button variant="ghost" onClick={onClose}>

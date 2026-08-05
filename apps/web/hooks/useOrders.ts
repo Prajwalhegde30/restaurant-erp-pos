@@ -6,6 +6,8 @@ export interface ActiveOrder {
   orderNumber?: string;
   tableId?: string;
   status: string;
+  version: number;
+  totalAmount: number;
 }
 
 interface CreateOrderPayload {
@@ -48,9 +50,6 @@ export function useCreateOrder() {
       const res = await fetchApi<{ data: unknown }>('/orders', {
         method: 'POST',
         body: JSON.stringify(payload),
-        headers: {
-          'x-idempotency-key': Math.random().toString(36).substring(2, 15),
-        },
       });
       return res.data;
     },
@@ -68,9 +67,6 @@ export function useProcessPayment() {
       const res = await fetchApi<{ data: unknown }>('/payments', {
         method: 'POST',
         body: JSON.stringify(payload),
-        headers: {
-          'x-idempotency-key': Math.random().toString(36).substring(2, 15),
-        },
       });
       return res.data;
     },

@@ -13,9 +13,16 @@ export interface CartItem {
 interface PosState {
   activeTableId: string | null;
   activeOrderId: string | null; // If an order already exists for this table
+  activeOrderVersion: number | null;
+  activeOrderTotal: number | null;
   cartItems: CartItem[];
 
-  setActiveTable: (tableId: string | null, orderId?: string | null) => void;
+  setActiveTable: (
+    tableId: string | null,
+    orderId?: string | null,
+    version?: number | null,
+    totalAmount?: number | null,
+  ) => void;
   addItem: (item: Omit<CartItem, 'id'>) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
@@ -25,10 +32,17 @@ interface PosState {
 export const usePosStore = create<PosState>((set) => ({
   activeTableId: null,
   activeOrderId: null,
+  activeOrderVersion: null,
+  activeOrderTotal: null,
   cartItems: [],
 
-  setActiveTable: (tableId, orderId = null) =>
-    set({ activeTableId: tableId, activeOrderId: orderId }),
+  setActiveTable: (tableId, orderId = null, version = null, totalAmount = null) =>
+    set({
+      activeTableId: tableId,
+      activeOrderId: orderId,
+      activeOrderVersion: version,
+      activeOrderTotal: totalAmount,
+    }),
 
   addItem: (item) =>
     set((state) => {
