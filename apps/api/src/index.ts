@@ -12,6 +12,7 @@ import { itemRouter } from './modules/catalog/item.router';
 import { modifierGroupRouter } from './modules/catalog/modifier-group.router';
 import { modifierOptionRouter } from './modules/catalog/modifier-option.router';
 import { comboRouter } from './modules/catalog/combo.router';
+import { authRouter } from './modules/auth/auth.router';
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -27,6 +28,7 @@ app.get('/health', (req, res) => {
 });
 
 // V1 API Routes
+app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/branches', branchRouter);
 app.use('/api/v1/staff', staffRouter);
 app.use('/api/v1/roles', roleRouter);
