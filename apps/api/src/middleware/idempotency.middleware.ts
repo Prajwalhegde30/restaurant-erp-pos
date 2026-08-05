@@ -21,14 +21,28 @@ export const idempotencyMiddleware = async (req: Request, res: Response, next: N
     });
   }
 
-  // Tenant context should ideally be injected by auth middleware.
+  // Tenant context is injected by auth middleware, which now runs before this middleware.
   interface AuthRequest extends Request {
     tenantId?: string;
     user?: { tenantId?: string };
   }
   const authReq = req as AuthRequest;
-  const tenantId = authReq.tenantId || authReq.user?.tenantId || 'system';
-  const cacheKey = `idempotency:${tenantId}:${idempotencyKey}`;
+  const tenantId = authReq.tenantId || authReq.user?.tenantId;
+
+  if (!tenantId) {
+    return res.status(500).json({
+      error: {
+        code: 'MISSING_TENANT_CONTEXT',
+        message: 'Tenant context is required for idempotency.',
+      },
+    });
+  }
+
+  // Normalize path by stripping trailing slashes to avoid false misses
+  const normalizedPath = req.originalUrl.split('?')[0].replace(/\/$/, '') || '/';
+
+  // Redis Key Design: tenantId:method:path:idempotencyKey
+  const cacheKey = `idempotency:${tenantId}:${req.method}:${normalizedPath}:${idempotencyKey}`;
 
   try {
     const cachedEntry = await redis.get(cacheKey);
@@ -47,6 +61,17 @@ export const idempotencyMiddleware = async (req: Request, res: Response, next: N
 
       if (parsed.status === 'completed') {
         logger.info(`Returning cached response for idempotency key: ${idempotencyKey}`);
+
+        // Replay headers
+        if (parsed.headers) {
+          for (const [key, value] of Object.entries(parsed.headers)) {
+            // Avoid setting restricted pseudo-headers if any leaked
+            if (value !== undefined && value !== null) {
+              res.setHeader(key, value as string | number | readonly string[]);
+            }
+          }
+        }
+
         return res.status(parsed.statusCode).send(parsed.body);
       }
     }
@@ -69,6 +94,7 @@ export const idempotencyMiddleware = async (req: Request, res: Response, next: N
         const cachePayload = {
           status: 'completed',
           statusCode,
+          headers: res.getHeaders(),
           body: body, // body is usually a string/Buffer here
         };
         redis.set(cacheKey, JSON.stringify(cachePayload), 'EX', COMPLETED_TTL).catch((err) => {
@@ -82,8 +108,7 @@ export const idempotencyMiddleware = async (req: Request, res: Response, next: N
     next();
   } catch (error) {
     logger.error('Idempotency middleware error:', error);
-    // On Redis failure, fail-open or fail-closed?
-    // Failing closed is safer for financial transactions.
+    // On Redis failure, fail-closed for safety.
     return res.status(500).json({
       error: {
         code: 'INTERNAL_ERROR',

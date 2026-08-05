@@ -23,7 +23,6 @@ import { idempotencyMiddleware } from './middleware/idempotency.middleware';
 app.use(cors());
 app.use(express.json());
 app.use(loggerMiddleware);
-app.use(idempotencyMiddleware);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -32,6 +31,12 @@ app.get('/health', (req, res) => {
 
 // V1 API Routes
 app.use('/api/v1/auth', authRouter);
+
+// Global authenticated middleware for V1 routes
+import { authMiddleware } from './middleware/auth.middleware';
+app.use('/api/v1', authMiddleware);
+app.use('/api/v1', idempotencyMiddleware);
+
 app.use('/api/v1/branches', branchRouter);
 app.use('/api/v1/staff', staffRouter);
 app.use('/api/v1/roles', roleRouter);
