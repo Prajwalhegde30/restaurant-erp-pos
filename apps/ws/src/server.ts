@@ -32,9 +32,13 @@ export class WebSocketServer {
 
     this.httpServer = createServer(this.app);
 
+    const allowedOrigins = process.env.ALLOWED_ORIGINS
+      ? process.env.ALLOWED_ORIGINS.split(',')
+      : ['http://localhost:3000', 'http://localhost:3002'];
+
     this.io = new SocketIOServer(this.httpServer, {
       cors: {
-        origin: '*', // Restrict this in production
+        origin: allowedOrigins,
         methods: ['GET', 'POST'],
       },
     });
