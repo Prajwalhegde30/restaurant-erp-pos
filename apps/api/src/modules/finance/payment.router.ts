@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { PaymentController } from './payment.controller';
 import { requireAuth } from '@repo/auth';
+import { requirePermission } from '../../middleware/rbac.middleware';
 import { idempotencyMiddleware } from '../../middleware/idempotency.middleware';
 
 const router = Router();
@@ -8,6 +9,11 @@ const router = Router();
 // Only authenticated endpoints
 router.use(requireAuth);
 
-router.post('/', idempotencyMiddleware, PaymentController.processPayment);
+router.post(
+  '/',
+  requirePermission('payments.manage.create'),
+  idempotencyMiddleware,
+  PaymentController.processPayment,
+);
 
 export { router as paymentRouter };

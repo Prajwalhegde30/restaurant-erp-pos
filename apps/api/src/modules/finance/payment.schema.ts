@@ -6,4 +6,5 @@ export const CreatePaymentSchema = z.object({
   amount: z.number().positive(),
   paymentMethod: PaymentMethodSchema,
   referenceCode: z.string().optional(),
+  currentVersion: z.number().int().nonnegative(),
 });

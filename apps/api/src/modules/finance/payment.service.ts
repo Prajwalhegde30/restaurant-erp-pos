@@ -13,6 +13,7 @@ export class PaymentService {
       amount: number;
       paymentMethod: PaymentMethod;
       referenceCode?: string;
+      currentVersion: number;
     },
     userId?: string,
   ) {
@@ -22,6 +23,12 @@ export class PaymentService {
         where: { id: data.orderId, tenantId, isDeleted: false },
       });
       if (!order) throw new Error('ORDER_NOT_FOUND');
+
+      // OCC Validation
+      if (order.version !== data.currentVersion) {
+        throw new Error('CONCURRENCY_CONFLICT');
+      }
+
       if (order.status === 'CLOSED' || order.status === 'VOIDED' || order.status === 'CANCELLED') {
         throw new Error('INVALID_ORDER_STATE');
       }

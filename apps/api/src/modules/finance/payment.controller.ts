@@ -25,7 +25,11 @@ export class PaymentController {
         if (error.message === 'ORDER_NOT_FOUND') {
           return res.status(404).json({ success: false, error: 'ORDER_NOT_FOUND' });
         }
-        if (['INVALID_ORDER_STATE', 'INVOICE_ALREADY_PAID'].includes(error.message)) {
+        if (
+          ['INVALID_ORDER_STATE', 'INVOICE_ALREADY_PAID', 'CONCURRENCY_CONFLICT'].includes(
+            error.message,
+          )
+        ) {
           return res.status(409).json({ success: false, error: error.message });
         }
         return res
