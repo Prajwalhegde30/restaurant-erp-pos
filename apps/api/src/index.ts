@@ -16,6 +16,9 @@ import { authRouter } from './modules/auth/auth.router';
 import { orderRouter } from './modules/order/order.router';
 import { paymentRouter } from './modules/finance/payment.router';
 import { ledgerRouter } from './modules/finance/ledger.router';
+import { supplierRouter } from './modules/inventory/supplier.router';
+import { ingredientRouter } from './modules/inventory/ingredient.router';
+import { inventoryItemRouter } from './modules/inventory/inventory-item.router';
 import { initEventBus, closeEventBus } from './lib/eventBus';
 
 const app = express();
@@ -60,6 +63,11 @@ app.use('/api/v1/orders', orderRouter);
 // Finance Routes
 app.use('/api/v1/payments', paymentRouter);
 app.use('/api/v1/ledger', ledgerRouter);
+
+// Supply Chain / Inventory Routes
+app.use('/api/v1/suppliers', supplierRouter);
+app.use('/api/v1/ingredients', ingredientRouter);
+app.use('/api/v1/inventory-items', inventoryItemRouter);
 
 // Global Error Handler (must be after routes)
 app.use(errorHandler);
