@@ -843,6 +843,22 @@ export const AuditLogScalarFieldEnumSchema = z.enum([
   'createdAt',
 ]);
 
+export const ConfigurationScalarFieldEnumSchema = z.enum([
+  'id',
+  'level',
+  'key',
+  'value',
+  'tenantId',
+  'branchId',
+  'stationId',
+  'createdAt',
+  'updatedAt',
+  'createdBy',
+  'updatedBy',
+  'isDeleted',
+  'deletedAt',
+]);
+
 export const SortOrderSchema = z.enum(['asc', 'desc']);
 
 export const NullableJsonNullValueInputSchema: z.ZodType<Prisma.NullableJsonNullValueInput> = z
@@ -850,6 +866,10 @@ export const NullableJsonNullValueInputSchema: z.ZodType<Prisma.NullableJsonNull
   .transform((value) =>
     value === 'JsonNull' ? Prisma.JsonNull : value === 'DbNull' ? Prisma.DbNull : value,
   );
+
+export const JsonNullValueInputSchema: z.ZodType<Prisma.JsonNullValueInput> = z
+  .enum(['JsonNull'])
+  .transform((value) => (value === 'JsonNull' ? Prisma.JsonNull : value));
 
 export const QueryModeSchema = z.enum(['default', 'insensitive']);
 
@@ -1030,6 +1050,10 @@ export const DailyClosingStatusSchema = z.enum(['PENDING', 'RECONCILED', 'LOCKED
 
 export type DailyClosingStatusType = `${z.infer<typeof DailyClosingStatusSchema>}`;
 
+export const ConfigurationLevelSchema = z.enum(['GLOBAL', 'TENANT', 'BRANCH', 'STATION']);
+
+export type ConfigurationLevelType = `${z.infer<typeof ConfigurationLevelSchema>}`;
+
 /////////////////////////////////////////
 // MODELS
 /////////////////////////////////////////
@@ -1094,6 +1118,7 @@ export type TenantRelations = {
   cashDrawers: CashDrawerWithRelations[];
   dailyClosings: DailyClosingWithRelations[];
   auditLogs: AuditLogWithRelations[];
+  configurations: ConfigurationWithRelations[];
 };
 
 export type TenantWithRelations = z.infer<typeof TenantSchema> & TenantRelations;
@@ -1138,6 +1163,7 @@ export const TenantWithRelationsSchema: z.ZodType<TenantWithRelations> = TenantS
     cashDrawers: z.lazy(() => CashDrawerWithRelationsSchema).array(),
     dailyClosings: z.lazy(() => DailyClosingWithRelationsSchema).array(),
     auditLogs: z.lazy(() => AuditLogWithRelationsSchema).array(),
+    configurations: z.lazy(() => ConfigurationWithRelationsSchema).array(),
   }),
 );
 
@@ -1183,6 +1209,7 @@ export type BranchRelations = {
   cashDrawers: CashDrawerWithRelations[];
   dailyClosings: DailyClosingWithRelations[];
   invoices: InvoiceWithRelations[];
+  configurations: ConfigurationWithRelations[];
 };
 
 export type BranchWithRelations = Omit<z.infer<typeof BranchSchema>, 'taxConfig'> & {
@@ -1208,6 +1235,7 @@ export const BranchWithRelationsSchema: z.ZodType<BranchWithRelations> = BranchS
     cashDrawers: z.lazy(() => CashDrawerWithRelationsSchema).array(),
     dailyClosings: z.lazy(() => DailyClosingWithRelationsSchema).array(),
     invoices: z.lazy(() => InvoiceWithRelationsSchema).array(),
+    configurations: z.lazy(() => ConfigurationWithRelationsSchema).array(),
   }),
 );
 
@@ -3211,3 +3239,44 @@ export const AuditLogWithRelationsSchema: z.ZodType<AuditLogWithRelations> = Aud
     user: z.lazy(() => UserWithRelationsSchema).nullable(),
   }),
 );
+
+/////////////////////////////////////////
+// CONFIGURATION SCHEMA
+/////////////////////////////////////////
+
+export const ConfigurationSchema = z.object({
+  level: ConfigurationLevelSchema,
+  id: z.uuid(),
+  key: z.string(),
+  value: JsonValueSchema,
+  tenantId: z.string().nullable(),
+  branchId: z.string().nullable(),
+  stationId: z.string().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+  createdBy: z.string().nullable(),
+  updatedBy: z.string().nullable(),
+  isDeleted: z.boolean(),
+  deletedAt: z.coerce.date().nullable(),
+});
+
+export type Configuration = z.infer<typeof ConfigurationSchema>;
+
+// CONFIGURATION RELATION SCHEMA
+//------------------------------------------------------
+
+export type ConfigurationRelations = {
+  tenant?: TenantWithRelations | null;
+  branch?: BranchWithRelations | null;
+};
+
+export type ConfigurationWithRelations = z.infer<typeof ConfigurationSchema> &
+  ConfigurationRelations;
+
+export const ConfigurationWithRelationsSchema: z.ZodType<ConfigurationWithRelations> =
+  ConfigurationSchema.merge(
+    z.object({
+      tenant: z.lazy(() => TenantWithRelationsSchema).nullable(),
+      branch: z.lazy(() => BranchWithRelationsSchema).nullable(),
+    }),
+  );

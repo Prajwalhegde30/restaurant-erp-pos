@@ -3,9 +3,9 @@ generator client {
 }
 
 generator zod {
-  provider       = "zod-prisma-types"
-  output         = "../../types/src/generated"
-  createInputTypes = false
+  provider                  = "zod-prisma-types"
+  output                    = "../../types/src/generated"
+  createInputTypes          = false
   createRelationValuesTypes = true
 }
 
@@ -204,6 +204,13 @@ enum DailyClosingStatus {
   LOCKED
 }
 
+enum ConfigurationLevel {
+  GLOBAL
+  TENANT
+  BRANCH
+  STATION
+}
+
 // ==========================================
 // PLATFORM FOUNDATION MODELS
 // ==========================================
@@ -267,6 +274,7 @@ model Tenant {
   dailyClosings          DailyClosing[]
   // Relations — Audit
   auditLogs              AuditLog[]
+  configurations         Configuration[]
 
   @@map("tenants")
 }
@@ -313,6 +321,7 @@ model Branch {
   cashDrawers       CashDrawer[]
   dailyClosings     DailyClosing[]
   invoices          Invoice[]
+  configurations    Configuration[]
 
   @@index([tenantId])
   @@map("branches")
@@ -1841,4 +1850,41 @@ model AuditLog {
   @@index([tenantId, action, createdAt])
   @@index([userId])
   @@map("audit_logs")
+}
+
+// ==========================================
+// CONFIGURATION MODEL (Task 1.4 Foundation Patch)
+// ==========================================
+
+// --- Configuration (§25.8) ---
+// JSONB-based resolution of cascading rules (Global -> Tenant -> Branch -> Station).
+model Configuration {
+  id    String             @id @default(uuid())
+  level ConfigurationLevel
+  key   String
+  value Json               @map("value")
+
+  tenantId  String? @map("tenant_id")
+  branchId  String? @map("branch_id")
+  stationId String? @map("station_id") // Loose reference
+
+  // Audit Fields
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+
+  // Soft Delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
+  // Ensure uniqueness for a key at a specific scope
+  @@unique([key, level, tenantId, branchId, stationId])
+  @@index([tenantId])
+  @@index([branchId])
+  @@map("configurations")
 }
