@@ -859,6 +859,51 @@ export const ConfigurationScalarFieldEnumSchema = z.enum([
   'deletedAt',
 ]);
 
+export const FiscalPeriodScalarFieldEnumSchema = z.enum([
+  'id',
+  'tenantId',
+  'name',
+  'startDate',
+  'endDate',
+  'isClosed',
+  'closedAt',
+  'closedBy',
+  'createdAt',
+  'updatedAt',
+  'isDeleted',
+]);
+
+export const CostCenterScalarFieldEnumSchema = z.enum([
+  'id',
+  'tenantId',
+  'branchId',
+  'code',
+  'name',
+  'description',
+  'createdAt',
+  'updatedAt',
+  'isDeleted',
+]);
+
+export const SupplierInvoiceScalarFieldEnumSchema = z.enum([
+  'id',
+  'tenantId',
+  'branchId',
+  'supplierId',
+  'purchaseOrderId',
+  'invoiceNumber',
+  'invoiceDate',
+  'dueDate',
+  'totalAmount',
+  'taxAmount',
+  'status',
+  'createdAt',
+  'updatedAt',
+  'createdBy',
+  'updatedBy',
+  'isDeleted',
+]);
+
 export const SortOrderSchema = z.enum(['asc', 'desc']);
 
 export const NullableJsonNullValueInputSchema: z.ZodType<Prisma.NullableJsonNullValueInput> = z
@@ -1119,6 +1164,9 @@ export type TenantRelations = {
   dailyClosings: DailyClosingWithRelations[];
   auditLogs: AuditLogWithRelations[];
   configurations: ConfigurationWithRelations[];
+  fiscalPeriods: FiscalPeriodWithRelations[];
+  costCenters: CostCenterWithRelations[];
+  supplierInvoices: SupplierInvoiceWithRelations[];
 };
 
 export type TenantWithRelations = z.infer<typeof TenantSchema> & TenantRelations;
@@ -1164,6 +1212,9 @@ export const TenantWithRelationsSchema: z.ZodType<TenantWithRelations> = TenantS
     dailyClosings: z.lazy(() => DailyClosingWithRelationsSchema).array(),
     auditLogs: z.lazy(() => AuditLogWithRelationsSchema).array(),
     configurations: z.lazy(() => ConfigurationWithRelationsSchema).array(),
+    fiscalPeriods: z.lazy(() => FiscalPeriodWithRelationsSchema).array(),
+    costCenters: z.lazy(() => CostCenterWithRelationsSchema).array(),
+    supplierInvoices: z.lazy(() => SupplierInvoiceWithRelationsSchema).array(),
   }),
 );
 
@@ -1205,10 +1256,12 @@ export type BranchRelations = {
   stockMovements: StockMovementWithRelations[];
   purchaseOrders: PurchaseOrderWithRelations[];
   goodsReceipts: GoodsReceiptWithRelations[];
+  invoices: InvoiceWithRelations[];
+  costCenters: CostCenterWithRelations[];
+  supplierInvoices: SupplierInvoiceWithRelations[];
   shifts: ShiftWithRelations[];
   cashDrawers: CashDrawerWithRelations[];
   dailyClosings: DailyClosingWithRelations[];
-  invoices: InvoiceWithRelations[];
   configurations: ConfigurationWithRelations[];
 };
 
@@ -1231,10 +1284,12 @@ export const BranchWithRelationsSchema: z.ZodType<BranchWithRelations> = BranchS
     stockMovements: z.lazy(() => StockMovementWithRelationsSchema).array(),
     purchaseOrders: z.lazy(() => PurchaseOrderWithRelationsSchema).array(),
     goodsReceipts: z.lazy(() => GoodsReceiptWithRelationsSchema).array(),
+    invoices: z.lazy(() => InvoiceWithRelationsSchema).array(),
+    costCenters: z.lazy(() => CostCenterWithRelationsSchema).array(),
+    supplierInvoices: z.lazy(() => SupplierInvoiceWithRelationsSchema).array(),
     shifts: z.lazy(() => ShiftWithRelationsSchema).array(),
     cashDrawers: z.lazy(() => CashDrawerWithRelationsSchema).array(),
     dailyClosings: z.lazy(() => DailyClosingWithRelationsSchema).array(),
-    invoices: z.lazy(() => InvoiceWithRelationsSchema).array(),
     configurations: z.lazy(() => ConfigurationWithRelationsSchema).array(),
   }),
 );
@@ -2260,6 +2315,7 @@ export type SupplierRelations = {
   tenant: TenantWithRelations;
   branch?: BranchWithRelations | null;
   purchaseOrders: PurchaseOrderWithRelations[];
+  supplierInvoices: SupplierInvoiceWithRelations[];
 };
 
 export type SupplierWithRelations = z.infer<typeof SupplierSchema> & SupplierRelations;
@@ -2269,6 +2325,7 @@ export const SupplierWithRelationsSchema: z.ZodType<SupplierWithRelations> = Sup
     tenant: z.lazy(() => TenantWithRelationsSchema),
     branch: z.lazy(() => BranchWithRelationsSchema).nullable(),
     purchaseOrders: z.lazy(() => PurchaseOrderWithRelationsSchema).array(),
+    supplierInvoices: z.lazy(() => SupplierInvoiceWithRelationsSchema).array(),
   }),
 );
 
@@ -2606,6 +2663,7 @@ export type PurchaseOrderRelations = {
   supplier: SupplierWithRelations;
   purchaseOrderItems: PurchaseOrderItemWithRelations[];
   goodsReceipts: GoodsReceiptWithRelations[];
+  supplierInvoice?: SupplierInvoiceWithRelations | null;
 };
 
 export type PurchaseOrderWithRelations = z.infer<typeof PurchaseOrderSchema> &
@@ -2619,6 +2677,7 @@ export const PurchaseOrderWithRelationsSchema: z.ZodType<PurchaseOrderWithRelati
       supplier: z.lazy(() => SupplierWithRelationsSchema),
       purchaseOrderItems: z.lazy(() => PurchaseOrderItemWithRelationsSchema).array(),
       goodsReceipts: z.lazy(() => GoodsReceiptWithRelationsSchema).array(),
+      supplierInvoice: z.lazy(() => SupplierInvoiceWithRelationsSchema).nullable(),
     }),
   );
 
@@ -3278,5 +3337,129 @@ export const ConfigurationWithRelationsSchema: z.ZodType<ConfigurationWithRelati
     z.object({
       tenant: z.lazy(() => TenantWithRelationsSchema).nullable(),
       branch: z.lazy(() => BranchWithRelationsSchema).nullable(),
+    }),
+  );
+
+/////////////////////////////////////////
+// FISCAL PERIOD SCHEMA
+/////////////////////////////////////////
+
+export const FiscalPeriodSchema = z.object({
+  id: z.uuid(),
+  tenantId: z.string(),
+  name: z.string(),
+  startDate: z.coerce.date(),
+  endDate: z.coerce.date(),
+  isClosed: z.boolean(),
+  closedAt: z.coerce.date().nullable(),
+  closedBy: z.string().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+  isDeleted: z.boolean(),
+});
+
+export type FiscalPeriod = z.infer<typeof FiscalPeriodSchema>;
+
+// FISCAL PERIOD RELATION SCHEMA
+//------------------------------------------------------
+
+export type FiscalPeriodRelations = {
+  tenant: TenantWithRelations;
+};
+
+export type FiscalPeriodWithRelations = z.infer<typeof FiscalPeriodSchema> & FiscalPeriodRelations;
+
+export const FiscalPeriodWithRelationsSchema: z.ZodType<FiscalPeriodWithRelations> =
+  FiscalPeriodSchema.merge(
+    z.object({
+      tenant: z.lazy(() => TenantWithRelationsSchema),
+    }),
+  );
+
+/////////////////////////////////////////
+// COST CENTER SCHEMA
+/////////////////////////////////////////
+
+export const CostCenterSchema = z.object({
+  id: z.uuid(),
+  tenantId: z.string(),
+  branchId: z.string().nullable(),
+  code: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+  isDeleted: z.boolean(),
+});
+
+export type CostCenter = z.infer<typeof CostCenterSchema>;
+
+// COST CENTER RELATION SCHEMA
+//------------------------------------------------------
+
+export type CostCenterRelations = {
+  tenant: TenantWithRelations;
+  branch?: BranchWithRelations | null;
+};
+
+export type CostCenterWithRelations = z.infer<typeof CostCenterSchema> & CostCenterRelations;
+
+export const CostCenterWithRelationsSchema: z.ZodType<CostCenterWithRelations> =
+  CostCenterSchema.merge(
+    z.object({
+      tenant: z.lazy(() => TenantWithRelationsSchema),
+      branch: z.lazy(() => BranchWithRelationsSchema).nullable(),
+    }),
+  );
+
+/////////////////////////////////////////
+// SUPPLIER INVOICE SCHEMA
+/////////////////////////////////////////
+
+export const SupplierInvoiceSchema = z.object({
+  status: InvoiceStatusSchema,
+  id: z.uuid(),
+  tenantId: z.string(),
+  branchId: z.string(),
+  supplierId: z.string(),
+  purchaseOrderId: z.string().nullable(),
+  invoiceNumber: z.string(),
+  invoiceDate: z.coerce.date(),
+  dueDate: z.coerce.date().nullable(),
+  totalAmount: z.instanceof(Prisma.Decimal, {
+    message: "Field 'totalAmount' must be a Decimal. Location: ['Models', 'SupplierInvoice']",
+  }),
+  taxAmount: z.instanceof(Prisma.Decimal, {
+    message: "Field 'taxAmount' must be a Decimal. Location: ['Models', 'SupplierInvoice']",
+  }),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+  createdBy: z.string().nullable(),
+  updatedBy: z.string().nullable(),
+  isDeleted: z.boolean(),
+});
+
+export type SupplierInvoice = z.infer<typeof SupplierInvoiceSchema>;
+
+// SUPPLIER INVOICE RELATION SCHEMA
+//------------------------------------------------------
+
+export type SupplierInvoiceRelations = {
+  tenant: TenantWithRelations;
+  branch: BranchWithRelations;
+  supplier: SupplierWithRelations;
+  purchaseOrder?: PurchaseOrderWithRelations | null;
+};
+
+export type SupplierInvoiceWithRelations = z.infer<typeof SupplierInvoiceSchema> &
+  SupplierInvoiceRelations;
+
+export const SupplierInvoiceWithRelationsSchema: z.ZodType<SupplierInvoiceWithRelations> =
+  SupplierInvoiceSchema.merge(
+    z.object({
+      tenant: z.lazy(() => TenantWithRelationsSchema),
+      branch: z.lazy(() => BranchWithRelationsSchema),
+      supplier: z.lazy(() => SupplierWithRelationsSchema),
+      purchaseOrder: z.lazy(() => PurchaseOrderWithRelationsSchema).nullable(),
     }),
   );

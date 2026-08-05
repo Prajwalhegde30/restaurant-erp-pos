@@ -169,4 +169,40 @@ export class PaymentService {
       return { payment, invoice, journal };
     });
   }
+
+  static async listPayments(
+    tenantId: string,
+    options: { invoiceId?: string; limit: number; cursor?: string },
+  ) {
+    const { invoiceId, limit, cursor } = options;
+
+    const payments = await prisma.payment.findMany({
+      where: {
+        tenantId,
+        isDeleted: false,
+        ...(invoiceId ? { invoiceId } : {}),
+      },
+      take: limit + 1,
+      cursor: cursor ? { id: cursor } : undefined,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        invoice: true,
+      },
+    });
+
+    const hasMore = payments.length > limit;
+    const data = hasMore ? payments.slice(0, -1) : payments;
+    const nextCursor = hasMore ? data[data.length - 1].id : null;
+
+    return { data, hasMore, nextCursor };
+  }
+
+  static async getPayment(tenantId: string, id: string) {
+    return await prisma.payment.findFirst({
+      where: { id, tenantId, isDeleted: false },
+      include: {
+        invoice: true,
+      },
+    });
+  }
 }

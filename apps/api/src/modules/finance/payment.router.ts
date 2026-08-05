@@ -16,4 +16,8 @@ router.post(
   PaymentController.processPayment,
 );
 
+router.get('/', requirePermission('payments.manage.view'), PaymentController.getPayments);
+
+router.get('/:id', requirePermission('payments.manage.view'), PaymentController.getPaymentById);
+
 export { router as paymentRouter };

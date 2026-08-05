@@ -39,4 +39,45 @@ export class PaymentController {
       return res.status(500).json({ success: false, error: 'Internal Server Error' });
     }
   }
+
+  static async getPayments(req: Request, res: Response) {
+    try {
+      const tenantId = req.tenantId as string;
+      const invoiceId = req.query.invoiceId as string | undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const cursor = req.query.cursor as string | undefined;
+
+      const result = await PaymentService.listPayments(tenantId, { invoiceId, limit, cursor });
+
+      return res.status(200).json({
+        data: result.data,
+        has_more: result.hasMore,
+        next_cursor: result.nextCursor,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        return res.status(400).json({ success: false, error: error.message });
+      }
+      return res.status(500).json({ success: false, error: 'Internal Server Error' });
+    }
+  }
+
+  static async getPaymentById(req: Request, res: Response) {
+    try {
+      const tenantId = req.tenantId as string;
+      const id = req.params.id;
+
+      const payment = await PaymentService.getPayment(tenantId, id);
+      if (!payment) {
+        return res.status(404).json({ success: false, error: 'PAYMENT_NOT_FOUND' });
+      }
+
+      return res.status(200).json(payment);
+    } catch (error) {
+      if (error instanceof Error) {
+        return res.status(400).json({ success: false, error: error.message });
+      }
+      return res.status(500).json({ success: false, error: 'Internal Server Error' });
+    }
+  }
 }

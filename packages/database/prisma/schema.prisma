@@ -275,6 +275,9 @@ model Tenant {
   // Relations — Audit
   auditLogs              AuditLog[]
   configurations         Configuration[]
+  fiscalPeriods          FiscalPeriod[]
+  costCenters            CostCenter[]
+  supplierInvoices       SupplierInvoice[]
 
   @@map("tenants")
 }
@@ -316,11 +319,13 @@ model Branch {
   stockMovements    StockMovement[]
   purchaseOrders    PurchaseOrder[]
   goodsReceipts     GoodsReceipt[]
+  invoices          Invoice[]
+  costCenters       CostCenter[]
+  supplierInvoices  SupplierInvoice[]
   // Relations — Finance
   shifts            Shift[]
   cashDrawers       CashDrawer[]
   dailyClosings     DailyClosing[]
-  invoices          Invoice[]
   configurations    Configuration[]
 
   @@index([tenantId])
@@ -1116,9 +1121,10 @@ model Supplier {
   deletedAt DateTime? @map("deleted_at")
 
   // Relations
-  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  branch         Branch?         @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  purchaseOrders PurchaseOrder[]
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch           Branch?           @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  purchaseOrders   PurchaseOrder[]
+  supplierInvoices SupplierInvoice[]
 
   // Note: Partial unique index UNIQUE(tenant_id, code) WHERE is_deleted = false enforced in migration
   @@index([tenantId])
@@ -1371,6 +1377,7 @@ model PurchaseOrder {
   supplier           Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
   purchaseOrderItems PurchaseOrderItem[]
   goodsReceipts      GoodsReceipt[]
+  supplierInvoice    SupplierInvoice?
 
   // Note: Partial unique index UNIQUE(tenant_id, po_number) WHERE is_deleted = false enforced in migration
   @@index([tenantId])
@@ -1890,4 +1897,75 @@ model Configuration {
   @@index([tenantId])
   @@index([branchId])
   @@map("configurations")
+}
+
+model FiscalPeriod {
+  id        String    @id @default(uuid())
+  tenantId  String    @map("tenant_id")
+  name      String
+  startDate DateTime  @map("start_date")
+  endDate   DateTime  @map("end_date")
+  isClosed  Boolean   @default(false) @map("is_closed")
+  closedAt  DateTime? @map("closed_at")
+  closedBy  String?   @map("closed_by")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  isDeleted Boolean  @default(false) @map("is_deleted")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([startDate, endDate])
+  @@map("fiscal_periods")
+}
+
+model CostCenter {
+  id          String  @id @default(uuid())
+  tenantId    String  @map("tenant_id")
+  branchId    String? @map("branch_id")
+  code        String
+  name        String
+  description String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  isDeleted Boolean  @default(false) @map("is_deleted")
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([branchId])
+  @@map("cost_centers")
+}
+
+model SupplierInvoice {
+  id              String        @id @default(uuid())
+  tenantId        String        @map("tenant_id")
+  branchId        String        @map("branch_id")
+  supplierId      String        @map("supplier_id")
+  purchaseOrderId String?       @unique @map("purchase_order_id")
+  invoiceNumber   String        @map("invoice_number")
+  invoiceDate     DateTime      @map("invoice_date")
+  dueDate         DateTime?     @map("due_date")
+  totalAmount     Decimal       @map("total_amount")
+  taxAmount       Decimal       @default(0) @map("tax_amount")
+  status          InvoiceStatus @default(ISSUED)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String?  @map("created_by")
+  updatedBy String?  @map("updated_by")
+  isDeleted Boolean  @default(false) @map("is_deleted")
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch        Branch         @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  supplier      Supplier       @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([branchId])
+  @@index([supplierId])
+  @@map("supplier_invoices")
 }

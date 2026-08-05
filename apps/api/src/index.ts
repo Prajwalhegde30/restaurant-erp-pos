@@ -15,6 +15,7 @@ import { comboRouter } from './modules/catalog/combo.router';
 import { authRouter } from './modules/auth/auth.router';
 import { orderRouter } from './modules/order/order.router';
 import { paymentRouter } from './modules/finance/payment.router';
+import { invoiceRouter } from './modules/finance/invoice.router';
 import { ledgerRouter } from './modules/finance/ledger.router';
 import { supplierRouter } from './modules/inventory/supplier.router';
 import { ingredientRouter } from './modules/inventory/ingredient.router';
@@ -71,6 +72,7 @@ app.use('/api/v1/orders', orderRouter);
 
 // Finance Routes
 app.use('/api/v1/payments', paymentRouter);
+app.use('/api/v1/invoices', invoiceRouter);
 app.use('/api/v1/ledger', ledgerRouter);
 
 // Supply Chain / Inventory Routes
