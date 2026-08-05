@@ -5,6 +5,7 @@ import { errorHandler } from './middleware/error.middleware';
 import { branchRouter } from './modules/branch/branch.router';
 import { staffRouter } from './modules/staff/staff.router';
 import { roleRouter } from './modules/role/role.router';
+import { settingsRouter } from './modules/settings/settings.router';
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -23,6 +24,7 @@ app.get('/health', (req, res) => {
 app.use('/api/v1/branches', branchRouter);
 app.use('/api/v1/staff', staffRouter);
 app.use('/api/v1/roles', roleRouter);
+app.use('/api/v1/settings', settingsRouter);
 
 // Global Error Handler (must be after routes)
 app.use(errorHandler);
