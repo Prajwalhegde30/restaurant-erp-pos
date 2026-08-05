@@ -17,10 +17,13 @@ import { authRouter } from './modules/auth/auth.router';
 const app = express();
 const port = process.env.PORT || 3001;
 
+import { idempotencyMiddleware } from './middleware/idempotency.middleware';
+
 // Global Middlewares
 app.use(cors());
 app.use(express.json());
 app.use(loggerMiddleware);
+app.use(idempotencyMiddleware);
 
 // Health check
 app.get('/health', (req, res) => {

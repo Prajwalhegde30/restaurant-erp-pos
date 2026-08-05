@@ -898,7 +898,7 @@ model Order {
   parentOrderId String? @map("parent_order_id")
 
   // Idempotency key for offline POS sync (§13)
-  idempotencyKey String @unique @map("idempotency_key")
+  idempotencyKey String @map("idempotency_key")
 
   // Optimistic Concurrency Control (§14) — clients must pass known version
   version Int @default(1)
@@ -935,6 +935,7 @@ model Order {
   orderMergesAsParent OrderMerge[] @relation("ParentOrder")
   orderMergesAsChild  OrderMerge[] @relation("ChildOrder")
 
+  @@unique([tenantId, idempotencyKey])
   @@index([tenantId])
   @@index([branchId])
   @@index([diningTableId])
@@ -1675,7 +1676,7 @@ model Payment {
   gatewayPayload Json? @map("gateway_payload")
 
   // Idempotency key for gateway retries (§13)
-  idempotencyKey String @unique @map("idempotency_key")
+  idempotencyKey String @map("idempotency_key")
 
   capturedAt DateTime? @map("captured_at")
   notes      String?
@@ -1695,6 +1696,7 @@ model Payment {
   refunds Refund[]
   Tenant  Tenant   @relation(fields: [tenantId], references: [id])
 
+  @@unique([tenantId, idempotencyKey])
   @@index([tenantId])
   @@index([invoiceId])
   @@index([tenantId, status])
@@ -1719,7 +1721,7 @@ model Refund {
   approvedAt DateTime? @map("approved_at")
 
   // Idempotency key (§13)
-  idempotencyKey String @unique @map("idempotency_key")
+  idempotencyKey String @map("idempotency_key")
 
   // Audit Fields
   createdAt DateTime @default(now()) @map("created_at")
@@ -1736,6 +1738,7 @@ model Refund {
   payment Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
   Tenant  Tenant  @relation(fields: [tenantId], references: [id])
 
+  @@unique([tenantId, idempotencyKey])
   @@index([tenantId])
   @@index([invoiceId])
   @@index([paymentId])
