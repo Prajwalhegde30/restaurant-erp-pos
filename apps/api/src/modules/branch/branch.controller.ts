@@ -18,7 +18,7 @@ const UpdateBranchDto = CreateBranchDto.partial();
 export class BranchController {
   static async create(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const tenantId = req.user?.tenantId; // from authMiddleware
+      const tenantId = req.tenantId; // from authMiddleware
       if (!tenantId) throw new Error('Tenant context missing');
 
       const data = CreateBranchDto.parse(req.body);
@@ -32,7 +32,7 @@ export class BranchController {
 
   static async getAll(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const tenantId = req.user?.tenantId;
+      const tenantId = req.tenantId;
       if (!tenantId) throw new Error('Tenant context missing');
 
       const branches = await BranchService.getBranches(tenantId);
@@ -50,7 +50,7 @@ export class BranchController {
 
   static async getById(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const tenantId = req.user?.tenantId;
+      const tenantId = req.tenantId;
       if (!tenantId) throw new Error('Tenant context missing');
 
       const branch = await BranchService.getBranchById(tenantId, req.params.id);
@@ -67,7 +67,7 @@ export class BranchController {
 
   static async update(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const tenantId = req.user?.tenantId;
+      const tenantId = req.tenantId;
       if (!tenantId) throw new Error('Tenant context missing');
 
       const data = UpdateBranchDto.parse(req.body);
@@ -82,7 +82,7 @@ export class BranchController {
 
   static async delete(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const tenantId = req.user?.tenantId;
+      const tenantId = req.tenantId;
       if (!tenantId) throw new Error('Tenant context missing');
 
       await BranchService.deleteBranch(tenantId, req.params.id);

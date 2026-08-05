@@ -1,9 +1,9 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import { createLoggerWithContext } from '@repo/logger';
 import { v4 as uuidv4 } from 'uuid';
+import { AuthRequest } from '@repo/auth';
 
-export interface AuthenticatedRequest extends Request {
-  user?: { tenantId?: string; id?: string; [key: string]: unknown };
+export interface AuthenticatedRequest extends AuthRequest {
   logger?: ReturnType<typeof createLoggerWithContext>;
 }
 
