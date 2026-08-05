@@ -13,6 +13,9 @@ import { modifierGroupRouter } from './modules/catalog/modifier-group.router';
 import { modifierOptionRouter } from './modules/catalog/modifier-option.router';
 import { comboRouter } from './modules/catalog/combo.router';
 import { authRouter } from './modules/auth/auth.router';
+import { orderRouter } from './modules/order/order.router';
+import { paymentRouter } from './modules/finance/payment.router';
+import { ledgerRouter } from './modules/finance/ledger.router';
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -49,6 +52,13 @@ app.use('/api/v1/menu-items', itemRouter);
 app.use('/api/v1/modifiers', modifierGroupRouter);
 app.use('/api/v1/modifier-options', modifierOptionRouter);
 app.use('/api/v1/combos', comboRouter);
+
+// Order Routes
+app.use('/api/v1/orders', orderRouter);
+
+// Finance Routes
+app.use('/api/v1/payments', paymentRouter);
+app.use('/api/v1/ledger', ledgerRouter);
 
 // Global Error Handler (must be after routes)
 app.use(errorHandler);
