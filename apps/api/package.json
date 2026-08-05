@@ -13,6 +13,7 @@
     "@repo/logger": "*",
     "@repo/pubsub": "^1.0.0",
     "@repo/types": "*",
+    "bullmq": "^6.0.8",
     "cors": "^2.8.5",
     "express": "5.2.1",
     "ioredis": "^6.0.0",

@@ -22,6 +22,13 @@ import { inventoryItemRouter } from './modules/inventory/inventory-item.router';
 import { purchaseOrderRouter } from './modules/inventory/purchase-order.router';
 import { goodsReceiptRouter } from './modules/inventory/goods-receipt.router';
 import { initEventBus, closeEventBus } from './lib/eventBus';
+import { startDepletionWorker } from './modules/inventory/workers/depletion.worker';
+
+import { Worker } from 'bullmq';
+import { DepletionJobPayload } from './modules/inventory/workers/depletion.producer';
+
+// Worker reference
+let depletionWorker: Worker<DepletionJobPayload> | undefined;
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -79,6 +86,9 @@ app.use(errorHandler);
 async function startServer() {
   await initEventBus();
 
+  // Start background workers
+  depletionWorker = startDepletionWorker();
+
   const server = app.listen(port, () => {
     console.log(`API server listening on port ${port}`);
   });
@@ -87,6 +97,9 @@ async function startServer() {
     console.log('Shutting down API server...');
     server.close();
     await closeEventBus();
+    if (depletionWorker) {
+      await depletionWorker.close();
+    }
     process.exit(0);
   };
 
