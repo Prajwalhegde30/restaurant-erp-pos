@@ -19,6 +19,8 @@ import { ledgerRouter } from './modules/finance/ledger.router';
 import { supplierRouter } from './modules/inventory/supplier.router';
 import { ingredientRouter } from './modules/inventory/ingredient.router';
 import { inventoryItemRouter } from './modules/inventory/inventory-item.router';
+import { purchaseOrderRouter } from './modules/inventory/purchase-order.router';
+import { goodsReceiptRouter } from './modules/inventory/goods-receipt.router';
 import { initEventBus, closeEventBus } from './lib/eventBus';
 
 const app = express();
@@ -68,6 +70,8 @@ app.use('/api/v1/ledger', ledgerRouter);
 app.use('/api/v1/suppliers', supplierRouter);
 app.use('/api/v1/ingredients', ingredientRouter);
 app.use('/api/v1/inventory-items', inventoryItemRouter);
+app.use('/api/v1/purchase-orders', purchaseOrderRouter);
+app.use('/api/v1/goods-receipts', goodsReceiptRouter);
 
 // Global Error Handler (must be after routes)
 app.use(errorHandler);
