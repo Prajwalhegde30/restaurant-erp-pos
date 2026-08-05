@@ -1,5 +1,7 @@
 import { prisma } from '@repo/database';
 import { OrderStatus, OrderType, Prisma } from '@prisma/client';
+import { eventBus } from '../../lib/eventBus';
+import { randomUUID } from 'crypto';
 
 export class OrderService {
   /**
@@ -92,7 +94,7 @@ export class OrderService {
     // Verify current version (OCC)
     const order = await prisma.order.findFirst({
       where: { id: orderId, tenantId, isDeleted: false },
-      select: { version: true, status: true },
+      select: { version: true, status: true, branchId: true },
     });
 
     if (!order) throw new Error('NOT_FOUND');
@@ -117,7 +119,7 @@ export class OrderService {
       }
     }
 
-    return await prisma.order.update({
+    const updatedOrder = await prisma.order.update({
       where: { id: orderId },
       data: {
         status,
@@ -125,6 +127,27 @@ export class OrderService {
         updatedBy: userId,
       },
     });
+
+    // Fire event to Pub/Sub (EventBus)
+    eventBus
+      .publish({
+        eventId: randomUUID(),
+        eventType: 'OrderStatusUpdated',
+        timestamp: new Date().toISOString(),
+        tenantId,
+        branchId: order.branchId,
+        payload: {
+          orderId,
+          status,
+        },
+      })
+      .catch((err) => {
+        // We don't want to throw and rollback just because pubsub failed,
+        // but we should log it for recovery.
+        console.error('Failed to publish OrderStatusUpdated event:', err);
+      });
+
+    return updatedOrder;
   }
 
   /**

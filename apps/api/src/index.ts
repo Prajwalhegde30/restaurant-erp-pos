@@ -16,6 +16,7 @@ import { authRouter } from './modules/auth/auth.router';
 import { orderRouter } from './modules/order/order.router';
 import { paymentRouter } from './modules/finance/payment.router';
 import { ledgerRouter } from './modules/finance/ledger.router';
+import { initEventBus, closeEventBus } from './lib/eventBus';
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -63,6 +64,25 @@ app.use('/api/v1/ledger', ledgerRouter);
 // Global Error Handler (must be after routes)
 app.use(errorHandler);
 
-app.listen(port, () => {
-  console.log(`API server listening on port ${port}`);
+async function startServer() {
+  await initEventBus();
+
+  const server = app.listen(port, () => {
+    console.log(`API server listening on port ${port}`);
+  });
+
+  const shutdown = async () => {
+    console.log('Shutting down API server...');
+    server.close();
+    await closeEventBus();
+    process.exit(0);
+  };
+
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
+}
+
+startServer().catch((err) => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
 });

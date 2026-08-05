@@ -6,6 +6,7 @@ import { TicketBoard } from '../../../components/pos/kds/TicketBoard';
 import { useKdsStore } from '../../../store/useKdsStore';
 import { useKdsOrders } from '../../../hooks/useKdsOrders';
 import { useKdsWebSocket } from '../../../hooks/useKdsWebSocket';
+import { fetchApi } from '../../../lib/apiClient';
 
 function KdsContent() {
   const searchParams = useSearchParams();
@@ -31,17 +32,41 @@ function KdsContent() {
     }
   }, [initialTickets, setTickets]);
 
-  const handleBumpTicket = (ticketId: string) => {
-    // Phase 6.4: This will also emit an API call to the backend
-    // For now in 6.3, we just optimistically update the local state to demonstrate the UI
+  const handleBumpTicket = async (ticketId: string) => {
+    // Phase 6.4: Optimistically update UI, then emit to backend
     const store = useKdsStore.getState();
     const ticket = store.tickets.find((t) => t.id === ticketId);
-    if (ticket) {
-      if (ticket.status === 'PLACED') {
-        updateTicketStatus(ticketId, 'IN_PREP');
-      } else if (ticket.status === 'IN_PREP') {
-        updateTicketStatus(ticketId, 'READY'); // This removes it from the KDS board
-      }
+    if (!ticket) return;
+
+    // Determine the next status
+    let nextStatus: 'IN_PREP' | 'READY' | null = null;
+    if (ticket.status === 'PLACED') {
+      nextStatus = 'IN_PREP';
+    } else if (ticket.status === 'IN_PREP') {
+      nextStatus = 'READY';
+    }
+
+    if (!nextStatus) return;
+
+    // 1. Optimistic Update
+    updateTicketStatus(ticketId, nextStatus);
+
+    // 2. Network Request
+    try {
+      await fetchApi(`/orders/${ticketId}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          status: nextStatus,
+          // Since KDS doesn't always have the full order's OCC version synced reliably in real-time right now,
+          // we might just pass 0 or the backend needs to handle it if version isn't passed.
+          // For safety in this demo, let's assume we pass the latest known version (default 0 for now)
+          version: 'version' in ticket ? Number(ticket.version) : 0,
+        }),
+      });
+    } catch (error) {
+      console.error('Failed to bump ticket, rolling back:', error);
+      // Rollback optimistic update
+      updateTicketStatus(ticketId, ticket.status);
     }
   };
 

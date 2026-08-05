@@ -11,6 +11,7 @@
     "@repo/auth": "*",
     "@repo/database": "*",
     "@repo/logger": "*",
+    "@repo/pubsub": "^1.0.0",
     "@repo/types": "*",
     "cors": "^2.8.5",
     "express": "5.2.1",

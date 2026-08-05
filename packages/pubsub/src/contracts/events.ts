@@ -23,3 +23,25 @@ export interface DomainEvent<T = unknown> {
 }
 
 export type EventCallback<T = unknown> = (event: DomainEvent<T>) => Promise<void> | void;
+
+export interface OrderStatusUpdatedPayload {
+  orderId: string;
+  status: string;
+}
+
+export interface KitchenTicketCreatedPayload {
+  id: string;
+  orderNumber: string;
+  status: string;
+  type: string;
+  table: string;
+  waiter: string;
+  time: string;
+  items: Array<{
+    id: string;
+    name: string;
+    quantity: number;
+    modifiers: string[];
+    notes?: string;
+  }>;
+}

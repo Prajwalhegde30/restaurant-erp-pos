@@ -5,6 +5,7 @@ import { createAdapter } from '@socket.io/redis-adapter';
 import Redis from 'ioredis';
 import cors from 'cors';
 import { logger } from '@repo/logger';
+import { EventBus } from '@repo/pubsub';
 import {
   ClientToServerEvents,
   ServerToClientEvents,
@@ -25,6 +26,7 @@ export class WebSocketServer {
   >;
   private pubClient: Redis;
   private subClient: Redis;
+  public eventBus: EventBus;
 
   constructor() {
     this.app = express();
@@ -48,6 +50,8 @@ export class WebSocketServer {
     this.subClient = this.pubClient.duplicate();
 
     this.io.adapter(createAdapter(this.pubClient, this.subClient));
+
+    this.eventBus = new EventBus(redisUrl);
 
     this.setupMiddleware();
     this.setupRoutes();
@@ -74,14 +78,15 @@ export class WebSocketServer {
   }
 
   private setupSocketHandlers() {
-    const connectionManager = new ConnectionManager(this.io);
+    const connectionManager = new ConnectionManager(this.io, this.eventBus);
 
     this.io.on('connection', (socket) => {
       connectionManager.handleConnection(socket);
     });
   }
 
-  public start() {
+  public async start() {
+    await this.eventBus.connect();
     const port = process.env.WS_PORT || 4000;
     this.httpServer.listen(port, () => {
       logger.info(`WebSocket Server running on port ${port}`);

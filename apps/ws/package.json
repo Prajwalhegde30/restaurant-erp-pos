@@ -10,6 +10,7 @@
   "dependencies": {
     "@repo/auth": "*",
     "@repo/logger": "*",
+    "@repo/pubsub": "^1.0.0",
     "@repo/types": "*",
     "@socket.io/redis-adapter": "^8.3.0",
     "cors": "^2.8.5",

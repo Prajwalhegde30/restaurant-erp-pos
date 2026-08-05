@@ -1,12 +1,12 @@
 export interface ServerToClientEvents {
-  new_ticket: (ticket: unknown) => void;
-  ticket_bumped: (data: { ticketId: string; status: string }) => void;
+  KitchenTicketCreated: (ticket: unknown) => void;
+  OrderStatusUpdated: (payload: { orderId: string; status: string }) => void;
+  OrderModified: (ticket: unknown) => void;
   pong: () => void;
 }
 
 export interface ClientToServerEvents {
   ping: () => void;
-  bump_ticket: (data: { ticketId: string }) => void;
 }
 
 export interface InterServerEvents {
