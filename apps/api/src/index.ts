@@ -22,6 +22,9 @@ import { ingredientRouter } from './modules/inventory/ingredient.router';
 import { inventoryItemRouter } from './modules/inventory/inventory-item.router';
 import { purchaseOrderRouter } from './modules/inventory/purchase-order.router';
 import { goodsReceiptRouter } from './modules/inventory/goods-receipt.router';
+import { approvalRouter } from './modules/approval/approval.router';
+import { shiftRouter } from './modules/finance/shift.router';
+import { dailyClosingRouter } from './modules/finance/daily-closing.router';
 import { initEventBus, closeEventBus } from './lib/eventBus';
 import { startDepletionWorker } from './modules/inventory/workers/depletion.worker';
 
@@ -74,6 +77,9 @@ app.use('/api/v1/orders', orderRouter);
 app.use('/api/v1/payments', paymentRouter);
 app.use('/api/v1/invoices', invoiceRouter);
 app.use('/api/v1/ledger', ledgerRouter);
+app.use('/api/v1/approvals', approvalRouter);
+app.use('/api/v1/shifts', shiftRouter);
+app.use('/api/v1/daily-closings', dailyClosingRouter);
 
 // Supply Chain / Inventory Routes
 app.use('/api/v1/suppliers', supplierRouter);
