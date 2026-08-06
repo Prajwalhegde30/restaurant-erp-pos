@@ -19,4 +19,13 @@ router.get(
   LedgerController.getLedgerAccounts,
 );
 
+import { idempotencyMiddleware } from '../../middleware/idempotency.middleware';
+
+router.post(
+  '/journals',
+  requirePermission('ledger.manage.create'),
+  idempotencyMiddleware,
+  LedgerController.postJournal,
+);
+
 export { router as ledgerRouter };
