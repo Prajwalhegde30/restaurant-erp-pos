@@ -26,6 +26,7 @@ import { goodsReceiptRouter } from './modules/inventory/goods-receipt.router';
 // import { approvalRouter } from './modules/approval/approval.router';
 import { shiftRouter } from './modules/finance/shift.router';
 import { dailyClosingRouter } from './modules/finance/daily-closing.router';
+import { analyticsRouter } from './modules/analytics/analytics.router';
 import { initEventBus, closeEventBus } from './lib/eventBus';
 import { startDepletionWorker } from './modules/inventory/workers/depletion.worker';
 
@@ -88,6 +89,9 @@ app.use('/api/v1/ingredients', ingredientRouter);
 app.use('/api/v1/inventory-items', inventoryItemRouter);
 app.use('/api/v1/purchase-orders', purchaseOrderRouter);
 app.use('/api/v1/goods-receipts', goodsReceiptRouter);
+
+// Analytics / Reports
+app.use('/api/v1/reports', analyticsRouter);
 
 // Global Error Handler (must be after routes)
 app.use(errorHandler);
