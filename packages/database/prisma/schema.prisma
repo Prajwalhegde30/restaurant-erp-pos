@@ -336,6 +336,7 @@ model Branch {
   dailyClosings      DailyClosing[]
   configurations     Configuration[]
   analyticsSnapshots AnalyticsSnapshot[]
+  auditLogs          AuditLog[]
 
   @@index([tenantId])
   @@map("branches")
@@ -1843,8 +1844,9 @@ model JournalEntry {
 // Physical DELETE strictly prohibited (§3, §17). No soft delete columns — immutable by design.
 // Actions audited include: Voids, Config changes, Reopening closed shifts, Permission grants, Day Close.
 model AuditLog {
-  id       String @id @default(uuid())
-  tenantId String @map("tenant_id")
+  id       String  @id @default(uuid())
+  tenantId String  @map("tenant_id")
+  branchId String? @map("branch_id")
 
   // Actor — nullable for system-generated events (e.g., scheduled workers)
   userId String? @map("user_id")
@@ -1873,11 +1875,14 @@ model AuditLog {
   createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  user   User?  @relation(fields: [userId], references: [id], onDelete: Restrict)
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   // Composite indexes for common forensic and compliance query patterns (§22)
   @@index([tenantId])
+  @@index([tenantId, branchId])
+  @@index([tenantId, branchId, action, createdAt])
   @@index([entityType, entityId])
   @@index([tenantId, action, createdAt])
   @@index([userId])

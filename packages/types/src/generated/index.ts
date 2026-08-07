@@ -834,6 +834,7 @@ export const JournalEntryScalarFieldEnumSchema = z.enum([
 export const AuditLogScalarFieldEnumSchema = z.enum([
   'id',
   'tenantId',
+  'branchId',
   'userId',
   'entityType',
   'entityId',
@@ -1443,6 +1444,7 @@ export type BranchRelations = {
   dailyClosings: DailyClosingWithRelations[];
   configurations: ConfigurationWithRelations[];
   analyticsSnapshots: AnalyticsSnapshotWithRelations[];
+  auditLogs: AuditLogWithRelations[];
 };
 
 export type BranchWithRelations = Omit<z.infer<typeof BranchSchema>, 'taxConfig'> & {
@@ -1472,6 +1474,7 @@ export const BranchWithRelationsSchema: z.ZodType<BranchWithRelations> = BranchS
     dailyClosings: z.lazy(() => DailyClosingWithRelationsSchema).array(),
     configurations: z.lazy(() => ConfigurationWithRelationsSchema).array(),
     analyticsSnapshots: z.lazy(() => AnalyticsSnapshotWithRelationsSchema).array(),
+    auditLogs: z.lazy(() => AuditLogWithRelationsSchema).array(),
   }),
 );
 
@@ -3462,6 +3465,7 @@ export const JournalEntryWithRelationsSchema: z.ZodType<JournalEntryWithRelation
 export const AuditLogSchema = z.object({
   id: z.uuid(),
   tenantId: z.string(),
+  branchId: z.string().nullable(),
   userId: z.string().nullable(),
   entityType: z.string(),
   entityId: z.string(),
@@ -3482,6 +3486,7 @@ export type AuditLog = z.infer<typeof AuditLogSchema>;
 
 export type AuditLogRelations = {
   tenant: TenantWithRelations;
+  branch?: BranchWithRelations | null;
   user?: UserWithRelations | null;
 };
 
@@ -3496,6 +3501,7 @@ export type AuditLogWithRelations = Omit<
 export const AuditLogWithRelationsSchema: z.ZodType<AuditLogWithRelations> = AuditLogSchema.merge(
   z.object({
     tenant: z.lazy(() => TenantWithRelationsSchema),
+    branch: z.lazy(() => BranchWithRelationsSchema).nullable(),
     user: z.lazy(() => UserWithRelationsSchema).nullable(),
   }),
 );
