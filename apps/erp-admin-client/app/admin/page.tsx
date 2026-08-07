@@ -23,13 +23,15 @@ export default function AdminDashboard() {
 
   const parseChartData = (data: unknown[]) => {
     if (!data) return [];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return data
-      .map((d: any) => ({
-        name: new Date(d.periodStart).toLocaleDateString(),
-        ...d.metrics,
-      }))
-      .reverse();
+    return (
+      data
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .map((d: any) => ({
+          name: new Date(d.periodStart).toLocaleDateString(),
+          ...d.metrics,
+        }))
+        .reverse()
+    );
   };
 
   const pmixChartData = parseChartData(pmixData?.data || []);
