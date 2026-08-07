@@ -33,4 +33,11 @@ router.post(
   CustomerController.applyCoupon,
 );
 
+// Gift Cards
+router.post(
+  '/:id/gift-card/redeem',
+  requirePermission('billing.process'),
+  CustomerController.redeemGiftCard,
+);
+
 export { router as customerRouter };

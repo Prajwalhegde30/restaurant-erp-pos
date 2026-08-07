@@ -145,4 +145,29 @@ export class CustomerController {
       next(err);
     }
   }
+
+  static async redeemGiftCard(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const tenantId = req.tenantId;
+      const customerId = req.params.id; // Optional customer validation
+      if (!tenantId) throw new Error('Tenant context missing');
+
+      const { code, orderId, amount } = req.body;
+      if (!code || !orderId || amount === undefined)
+        throw new Error('code, orderId, and amount are required');
+
+      const { GiftCardService } = await import('./gift-card.service');
+      const result = await GiftCardService.redeemGiftCard(
+        tenantId,
+        code,
+        orderId,
+        Number(amount),
+        customerId,
+      );
+
+      res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
 }
