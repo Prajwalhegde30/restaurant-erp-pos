@@ -26,4 +26,11 @@ router.get(
   CustomerController.getLoyaltyBalance,
 );
 
+// Coupons
+router.post(
+  '/:id/coupon/apply',
+  requirePermission('coupons.manage'),
+  CustomerController.applyCoupon,
+);
+
 export { router as customerRouter };

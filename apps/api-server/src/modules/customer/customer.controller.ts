@@ -127,4 +127,22 @@ export class CustomerController {
       next(err);
     }
   }
+
+  static async applyCoupon(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const tenantId = req.tenantId;
+      const customerId = req.params.id; // Optional context, but provided in route
+      if (!tenantId) throw new Error('Tenant context missing');
+
+      const { code, orderId } = req.body;
+      if (!code || !orderId) throw new Error('code and orderId are required');
+
+      const { CouponService } = await import('./coupon.service');
+      const result = await CouponService.applyCoupon(tenantId, code, orderId, customerId);
+
+      res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
 }
