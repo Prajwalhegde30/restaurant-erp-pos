@@ -45,7 +45,7 @@ import { idempotencyMiddleware } from './middleware/idempotency.middleware';
 // Global Middlewares
 app.use(cors());
 app.use(express.json());
-app.use(loggerMiddleware);
+app.use(loggerMiddleware as unknown as express.RequestHandler);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -57,7 +57,7 @@ app.use('/api/v1/auth', authRouter);
 
 // Global authenticated middleware for V1 routes
 import { authMiddleware } from './middleware/auth.middleware';
-app.use('/api/v1', authMiddleware);
+app.use('/api/v1', authMiddleware as unknown as express.RequestHandler);
 app.use('/api/v1', idempotencyMiddleware);
 
 app.use('/api/v1/branches', branchRouter);
@@ -98,7 +98,7 @@ app.use('/api/v1/reports', analyticsRouter);
 app.use('/api/v1/audit-logs', auditRouter);
 
 // Global Error Handler (must be after routes)
-app.use(errorHandler);
+app.use(errorHandler as unknown as express.ErrorRequestHandler);
 
 async function startServer() {
   await initEventBus();

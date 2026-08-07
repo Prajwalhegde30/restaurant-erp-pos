@@ -29,7 +29,7 @@ export const useAuditLogs = (params: AuditLogSearchParams = {}) => {
         `/audit-logs?${searchParams.toString()}`,
       );
     },
-    initialPageParam: undefined,
+    initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => (lastPage.has_more ? lastPage.next_cursor : undefined),
   });
 };
