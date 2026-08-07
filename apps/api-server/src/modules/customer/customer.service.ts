@@ -1,4 +1,4 @@
-import { prisma } from '@repo/database';
+import { Prisma, prisma } from '@repo/database';
 import { CustomerStatus } from '@repo/database';
 
 export class CustomerService {
@@ -30,7 +30,7 @@ export class CustomerService {
    * Get all customers for a tenant with cursor pagination
    */
   static async getCustomers(tenantId: string, limit = 50, cursor?: string) {
-    const args: any = {
+    const args: Prisma.CustomerFindManyArgs = {
       where: {
         tenantId,
         isDeleted: false,
