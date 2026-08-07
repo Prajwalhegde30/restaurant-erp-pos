@@ -285,6 +285,7 @@ model Tenant {
   GiftCard               GiftCard[]
   CouponCustomerUsage    CouponCustomerUsage[]
   GiftCardTransaction    GiftCardTransaction[]
+  analyticsSnapshots     AnalyticsSnapshot[]
 
   @@map("tenants")
 }
@@ -310,30 +311,31 @@ model Branch {
   deletedAt DateTime? @map("deleted_at")
 
   // Relations — IAM
-  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  userRoles         UserRole[]
-  branchAssignments BranchAssignment[]
+  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  userRoles          UserRole[]
+  branchAssignments  BranchAssignment[]
   // Relations — Catalog
-  menuBranches      MenuBranch[]
+  menuBranches       MenuBranch[]
   // Relations — Operational
-  diningTables      DiningTable[]
-  reservations      Reservation[]
-  orders            Order[]
+  diningTables       DiningTable[]
+  reservations       Reservation[]
+  orders             Order[]
   // Relations — Supply Chain
-  suppliers         Supplier[]
-  inventoryItems    InventoryItem[]
-  inventoryBatches  InventoryBatch[]
-  stockMovements    StockMovement[]
-  purchaseOrders    PurchaseOrder[]
-  goodsReceipts     GoodsReceipt[]
-  invoices          Invoice[]
-  costCenters       CostCenter[]
-  supplierInvoices  SupplierInvoice[]
+  suppliers          Supplier[]
+  inventoryItems     InventoryItem[]
+  inventoryBatches   InventoryBatch[]
+  stockMovements     StockMovement[]
+  purchaseOrders     PurchaseOrder[]
+  goodsReceipts      GoodsReceipt[]
+  invoices           Invoice[]
+  costCenters        CostCenter[]
+  supplierInvoices   SupplierInvoice[]
   // Relations — Finance
-  shifts            Shift[]
-  cashDrawers       CashDrawer[]
-  dailyClosings     DailyClosing[]
-  configurations    Configuration[]
+  shifts             Shift[]
+  cashDrawers        CashDrawer[]
+  dailyClosings      DailyClosing[]
+  configurations     Configuration[]
+  analyticsSnapshots AnalyticsSnapshot[]
 
   @@index([tenantId])
   @@map("branches")
@@ -2247,4 +2249,33 @@ model GiftCardTransaction {
   @@index([giftCardId])
   @@index([orderId])
   @@map("gift_card_transactions")
+}
+
+// ==========================================
+// ANALYTICS SNAPSHOTS (Phase 10)
+// ==========================================
+
+enum AnalyticsSnapshotType {
+  PMIX
+  LABOR_TO_SALES
+}
+
+model AnalyticsSnapshot {
+  id       String                @id @default(uuid())
+  tenantId String                @map("tenant_id")
+  branchId String?               @map("branch_id")
+  type     AnalyticsSnapshotType
+  data     Json
+
+  periodStart DateTime @map("period_start")
+  periodEnd   DateTime @map("period_end")
+
+  capturedAt DateTime @default(now()) @map("captured_at")
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([tenantId, type, periodStart])
+  @@map("analytics_snapshots")
 }

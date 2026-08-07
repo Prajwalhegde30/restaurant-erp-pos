@@ -1019,6 +1019,17 @@ export const GiftCardTransactionScalarFieldEnumSchema = z.enum([
   'createdAt',
 ]);
 
+export const AnalyticsSnapshotScalarFieldEnumSchema = z.enum([
+  'id',
+  'tenantId',
+  'branchId',
+  'type',
+  'data',
+  'periodStart',
+  'periodEnd',
+  'capturedAt',
+]);
+
 export const SortOrderSchema = z.enum(['asc', 'desc']);
 
 export const NullableJsonNullValueInputSchema: z.ZodType<Prisma.NullableJsonNullValueInput> = z
@@ -1247,6 +1258,10 @@ export const MembershipTierSchema = z.enum(['BASIC', 'SILVER', 'GOLD', 'PLATINUM
 
 export type MembershipTierType = `${z.infer<typeof MembershipTierSchema>}`;
 
+export const AnalyticsSnapshotTypeSchema = z.enum(['PMIX', 'LABOR_TO_SALES']);
+
+export type AnalyticsSnapshotTypeType = `${z.infer<typeof AnalyticsSnapshotTypeSchema>}`;
+
 /////////////////////////////////////////
 // MODELS
 /////////////////////////////////////////
@@ -1322,6 +1337,7 @@ export type TenantRelations = {
   GiftCard: GiftCardWithRelations[];
   CouponCustomerUsage: CouponCustomerUsageWithRelations[];
   GiftCardTransaction: GiftCardTransactionWithRelations[];
+  analyticsSnapshots: AnalyticsSnapshotWithRelations[];
 };
 
 export type TenantWithRelations = z.infer<typeof TenantSchema> & TenantRelations;
@@ -1377,6 +1393,7 @@ export const TenantWithRelationsSchema: z.ZodType<TenantWithRelations> = TenantS
     GiftCard: z.lazy(() => GiftCardWithRelationsSchema).array(),
     CouponCustomerUsage: z.lazy(() => CouponCustomerUsageWithRelationsSchema).array(),
     GiftCardTransaction: z.lazy(() => GiftCardTransactionWithRelationsSchema).array(),
+    analyticsSnapshots: z.lazy(() => AnalyticsSnapshotWithRelationsSchema).array(),
   }),
 );
 
@@ -1425,6 +1442,7 @@ export type BranchRelations = {
   cashDrawers: CashDrawerWithRelations[];
   dailyClosings: DailyClosingWithRelations[];
   configurations: ConfigurationWithRelations[];
+  analyticsSnapshots: AnalyticsSnapshotWithRelations[];
 };
 
 export type BranchWithRelations = Omit<z.infer<typeof BranchSchema>, 'taxConfig'> & {
@@ -1453,6 +1471,7 @@ export const BranchWithRelationsSchema: z.ZodType<BranchWithRelations> = BranchS
     cashDrawers: z.lazy(() => CashDrawerWithRelationsSchema).array(),
     dailyClosings: z.lazy(() => DailyClosingWithRelationsSchema).array(),
     configurations: z.lazy(() => ConfigurationWithRelationsSchema).array(),
+    analyticsSnapshots: z.lazy(() => AnalyticsSnapshotWithRelationsSchema).array(),
   }),
 );
 
@@ -3966,5 +3985,41 @@ export const GiftCardTransactionWithRelationsSchema: z.ZodType<GiftCardTransacti
       giftCard: z.lazy(() => GiftCardWithRelationsSchema),
       order: z.lazy(() => OrderWithRelationsSchema).nullable(),
       payment: z.lazy(() => PaymentWithRelationsSchema).nullable(),
+    }),
+  );
+
+/////////////////////////////////////////
+// ANALYTICS SNAPSHOT SCHEMA
+/////////////////////////////////////////
+
+export const AnalyticsSnapshotSchema = z.object({
+  type: AnalyticsSnapshotTypeSchema,
+  id: z.uuid(),
+  tenantId: z.string(),
+  branchId: z.string().nullable(),
+  data: JsonValueSchema,
+  periodStart: z.coerce.date(),
+  periodEnd: z.coerce.date(),
+  capturedAt: z.coerce.date(),
+});
+
+export type AnalyticsSnapshot = z.infer<typeof AnalyticsSnapshotSchema>;
+
+// ANALYTICS SNAPSHOT RELATION SCHEMA
+//------------------------------------------------------
+
+export type AnalyticsSnapshotRelations = {
+  tenant: TenantWithRelations;
+  branch?: BranchWithRelations | null;
+};
+
+export type AnalyticsSnapshotWithRelations = z.infer<typeof AnalyticsSnapshotSchema> &
+  AnalyticsSnapshotRelations;
+
+export const AnalyticsSnapshotWithRelationsSchema: z.ZodType<AnalyticsSnapshotWithRelations> =
+  AnalyticsSnapshotSchema.merge(
+    z.object({
+      tenant: z.lazy(() => TenantWithRelationsSchema),
+      branch: z.lazy(() => BranchWithRelationsSchema).nullable(),
     }),
   );

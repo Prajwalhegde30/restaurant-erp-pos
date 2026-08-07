@@ -13,6 +13,7 @@ export interface ActiveOrder {
 interface CreateOrderPayload {
   branchId: string;
   tableId: string;
+  customerId?: string;
   orderType: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
   items: {
     menuItemId: string;
