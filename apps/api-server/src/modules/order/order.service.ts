@@ -2,8 +2,205 @@ import { prisma } from '@repo/database';
 import { OrderStatus, OrderType, Prisma } from '@prisma/client';
 import { eventBus } from '../../lib/eventBus';
 import { randomUUID } from 'crypto';
+import { DepletionProducer } from '../inventory/workers/depletion.producer';
 
 export class OrderService {
+  /**
+   * Create order with items atomically
+   */
+  static async createOrderWithItems(
+    tenantId: string,
+    idempotencyKey: string,
+    data: {
+      branchId: string;
+      diningTableId?: string;
+      orderType?: OrderType;
+      notes?: string;
+      items?: {
+        menuItemId: string;
+        quantity: number;
+        notes?: string;
+        modifierSelections: { modifierOptionId: string }[];
+      }[];
+    },
+    userId?: string,
+  ) {
+    const itemData = data.items || [];
+
+    // 1. Pre-fetch menu items
+    const menuItemIds = itemData.map((i) => i.menuItemId);
+    const menuItems = await prisma.menuItem.findMany({
+      where: { id: { in: menuItemIds }, tenantId, isDeleted: false },
+    });
+    const menuItemsMap = new Map(menuItems.map((m) => [m.id, m]));
+
+    // 2. Pre-fetch options
+    const optionIds = itemData.flatMap((i) => i.modifierSelections.map((m) => m.modifierOptionId));
+    const options = await prisma.modifierOption.findMany({
+      where: { id: { in: optionIds }, tenantId, isDeleted: false },
+    });
+    const optionsMap = new Map(options.map((o) => [o.id, o]));
+
+    // 3. Pre-fetch recipes
+    const recipes = await prisma.recipe.findMany({
+      where: { menuItemId: { in: menuItemIds }, tenantId, isDeleted: false },
+      include: {
+        recipeIngredients: {
+          include: {
+            ingredient: true,
+          },
+        },
+      },
+    });
+    const recipeMap = new Map(recipes.map((r) => [r.menuItemId, r]));
+
+    // Validate all items exist
+    for (const item of itemData) {
+      if (!menuItemsMap.has(item.menuItemId)) {
+        throw new Error('MENU_ITEM_NOT_FOUND');
+      }
+    }
+
+    return await prisma.$transaction(async (tx) => {
+      // 4. Create base order
+      const order = await tx.order.create({
+        data: {
+          tenantId,
+          idempotencyKey,
+          branchId: data.branchId,
+          diningTableId: data.diningTableId,
+          orderType: data.orderType || 'DINE_IN',
+          notes: data.notes,
+          userId,
+          status: 'PLACED', // POS orders start as PLACED or IN_PREP usually
+        },
+      });
+
+      let subtotal = 0;
+      let taxAmount = 0;
+      const createdItems = [];
+
+      // 5. Create items
+      for (const item of itemData) {
+        const menuItem = menuItemsMap.get(item.menuItemId)!;
+
+        let modifierTotal = 0;
+        const modifierSnapshots: Prisma.OrderItemModifierSelectionCreateWithoutOrderItemInput[] =
+          [];
+
+        for (const mod of item.modifierSelections) {
+          const opt = optionsMap.get(mod.modifierOptionId);
+          if (opt) {
+            modifierTotal += Number(opt.priceDelta);
+            modifierSnapshots.push({
+              tenantId,
+              modifierOption: { connect: { id: opt.id } },
+              priceDeltaSnapshot: opt.priceDelta,
+            });
+          }
+        }
+
+        const recipeSnapshots: Prisma.OrderItemRecipeSnapshotCreateWithoutOrderItemInput[] = [];
+        const recipe = recipeMap.get(item.menuItemId);
+        if (recipe) {
+          for (const ri of recipe.recipeIngredients) {
+            recipeSnapshots.push({
+              recipeId: recipe.id,
+              recipeName: recipe.name,
+              ingredientId: ri.ingredientId,
+              ingredientName: ri.ingredient.name,
+              quantity: ri.quantity,
+              unit: ri.unit,
+              yieldLossPct: ri.yieldLossPct,
+              spoilagePct: ri.spoilagePct,
+            });
+          }
+        }
+
+        const unitPrice = Number(menuItem.price) + modifierTotal;
+        const totalPrice = unitPrice * item.quantity;
+
+        const orderItem = await tx.orderItem.create({
+          data: {
+            tenantId,
+            orderId: order.id,
+            menuItemId: item.menuItemId,
+            quantity: item.quantity,
+            notes: item.notes,
+            unitPrice,
+            taxRate: menuItem.taxRate,
+            totalPrice,
+            createdBy: userId,
+            orderItemModifierSelections: { create: modifierSnapshots },
+            orderItemRecipeSnapshots: { create: recipeSnapshots },
+          },
+          include: {
+            orderItemModifierSelections: true,
+          },
+        });
+
+        createdItems.push({ orderItem, menuItem });
+
+        subtotal += totalPrice;
+        taxAmount += totalPrice * Number(menuItem.taxRate);
+      }
+
+      const totalAmount = subtotal + taxAmount;
+
+      const finalOrder = await tx.order.update({
+        where: { id: order.id },
+        data: { subtotal, taxAmount, totalAmount },
+        include: {
+          orderItems: {
+            include: { orderItemModifierSelections: true },
+          },
+        },
+      });
+
+      // 6. Queue Depletion Jobs
+      for (const { orderItem } of createdItems) {
+        await DepletionProducer.queueDepletionJob({
+          tenantId,
+          branchId: data.branchId,
+          orderItemId: orderItem.id,
+        }).catch((err) => {
+          console.error('Failed to queue depletion job:', err);
+        });
+      }
+
+      // 7. Fire KDS Event
+      eventBus
+        .publish({
+          eventId: randomUUID(),
+          eventType: 'KitchenTicketCreated',
+          timestamp: new Date().toISOString(),
+          tenantId,
+          branchId: data.branchId,
+          payload: {
+            id: finalOrder.id,
+            orderNumber: finalOrder.id.slice(-6).toUpperCase(),
+            status: finalOrder.status,
+            type: finalOrder.orderType,
+            table: data.diningTableId || 'N/A', // KDS expects a string
+            waiter: userId || 'System',
+            time: finalOrder.createdAt.toISOString(),
+            items: createdItems.map(({ orderItem, menuItem }) => ({
+              id: orderItem.id,
+              name: menuItem.name,
+              quantity: orderItem.quantity,
+              modifiers: orderItem.orderItemModifierSelections.map((m) => m.modifierOptionId),
+              notes: orderItem.notes || undefined,
+            })),
+          },
+        })
+        .catch((err) => {
+          console.error('Failed to publish KitchenTicketCreated event:', err);
+        });
+
+      return finalOrder;
+    });
+  }
+
   /**
    * Create a new order with idempotency check
    */
@@ -183,7 +380,7 @@ export class OrderService {
         modifierTotal += Number(opt.priceDelta);
         modifierSnapshots.push({
           tenantId,
-          modifierOptionId: opt.id,
+          modifierOption: { connect: { id: opt.id } },
           priceDeltaSnapshot: opt.priceDelta,
         });
       }

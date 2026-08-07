@@ -21,13 +21,12 @@ export class OrderController {
         diningTableId: data.diningTableId || data.tableId, // map tableId from POS
       };
 
-      const order = await OrderService.createOrder(tenantId, idempotencyKey, orderData, userId);
-
-      if (data.items && data.items.length > 0) {
-        for (const item of data.items) {
-          await OrderService.addItemToOrder(tenantId, order.id, item, userId);
-        }
-      }
+      const order = await OrderService.createOrderWithItems(
+        tenantId,
+        idempotencyKey,
+        orderData,
+        userId,
+      );
 
       res.status(201).json(order);
     } catch (err) {
