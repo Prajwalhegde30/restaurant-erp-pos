@@ -14,4 +14,16 @@ router.get('/:id', requirePermission('customers.view'), CustomerController.getBy
 router.put('/:id', requirePermission('customers.edit'), CustomerController.update);
 router.delete('/:id', requirePermission('customers.delete'), CustomerController.delete);
 
+// Loyalty
+router.post(
+  '/:id/loyalty/accrue',
+  requirePermission('loyalty.manage'),
+  CustomerController.accruePoints,
+);
+router.get(
+  '/:id/loyalty/balance',
+  requirePermission('customers.view'),
+  CustomerController.getLoyaltyBalance,
+);
+
 export { router as customerRouter };

@@ -95,4 +95,36 @@ export class CustomerController {
       next(err);
     }
   }
+
+  static async accruePoints(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const tenantId = req.tenantId;
+      const userId = req.user?.id;
+      if (!tenantId || !userId) throw new Error('Tenant or User context missing');
+
+      const { orderId } = req.body;
+      if (!orderId) throw new Error('orderId is required');
+
+      const { LoyaltyService } = await import('./loyalty.service');
+      const result = await LoyaltyService.accruePointsForOrder(tenantId, orderId, userId);
+
+      res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async getLoyaltyBalance(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const tenantId = req.tenantId;
+      if (!tenantId) throw new Error('Tenant context missing');
+
+      const { LoyaltyService } = await import('./loyalty.service');
+      const balance = await LoyaltyService.getCustomerBalance(tenantId, req.params.id);
+
+      res.status(200).json({ balance });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
