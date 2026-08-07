@@ -357,9 +357,10 @@ Permissions are grouped by domain, corresponding to the bounded contexts in the 
 
 ### 9.8 CRM & Marketing
 
-- `customers.view`, `customers.edit`
+- `customers.view`, `customers.create`, `customers.edit`, `customers.delete`
 - `loyalty.manage`
-- `marketing_campaigns.create`, `marketing_campaigns.send`
+- `coupons.manage`
+- `gift_cards.manage`
 - `customer_pii.view` _(sensitive, independently audited)_
 
 ### 9.9 HR & Workforce

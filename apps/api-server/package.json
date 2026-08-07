@@ -1,0 +1,32 @@
+{
+  "name": "api-server",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "ts-node src/index.ts",
+    "build": "tsup src/index.ts --format cjs --clean",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@repo/auth": "*",
+    "@repo/database": "*",
+    "@repo/logger": "*",
+
+    "@repo/types": "*",
+    "bullmq": "^6.0.8",
+    "cors": "^2.8.5",
+    "express": "5.2.1",
+    "ioredis": "^6.0.0",
+    "uuid": "^11.0.5",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "5.0.6",
+    "@types/node": "26.1.2",
+    "@types/uuid": "^10.0.0",
+    "ts-node": "10.9.2",
+    "tsup": "^8.5.1",
+    "typescript": "6.0.3"
+  }
+}
