@@ -284,6 +284,7 @@ model Tenant {
   Coupon                 Coupon[]
   GiftCard               GiftCard[]
   CouponCustomerUsage    CouponCustomerUsage[]
+  GiftCardTransaction    GiftCardTransaction[]
 
   @@map("tenants")
 }
@@ -951,6 +952,7 @@ model Order {
   Coupon              Coupon?               @relation(fields: [couponId], references: [id])
   couponId            String?
   CouponCustomerUsage CouponCustomerUsage[]
+  GiftCardTransaction GiftCardTransaction[]
 
   @@unique([tenantId, idempotencyKey])
   @@index([tenantId])
@@ -1693,6 +1695,10 @@ model Payment {
   amount        Decimal @db.Decimal(10, 2)
   referenceCode String? @map("reference_code")
 
+  giftCardId          String?               @map("gift_card_id")
+  GiftCard            GiftCard?             @relation(fields: [giftCardId], references: [id])
+  GiftCardTransaction GiftCardTransaction[]
+
   // Gateway response stored as JSONB (do NOT log sensitive PAN/CVV per §20)
   gatewayPayload Json? @map("gateway_payload")
 
@@ -2013,6 +2019,13 @@ enum GiftCardStatus {
   BLOCKED
 }
 
+enum GiftCardTransactionType {
+  ACTIVATION
+  REDEMPTION
+  REFUND
+  ADJUSTMENT
+}
+
 enum LoyaltyTransactionType {
   EARNED
   REDEEMED
@@ -2053,6 +2066,7 @@ model Customer {
   orders         Order[]
   invoices       Invoice[]
   couponUsages   CouponCustomerUsage[]
+  giftCards      GiftCard[]
 
   @@index([tenantId])
   @@index([tenantId, email])
@@ -2197,10 +2211,40 @@ model GiftCard {
   isDeleted Boolean   @default(false) @map("is_deleted")
   deletedAt DateTime? @map("deleted_at")
 
+  customerId String? @map("customer_id")
+
   // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  tenant       Tenant                @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  customer     Customer?             @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  transactions GiftCardTransaction[]
+  payments     Payment[]
 
   @@index([tenantId])
   @@index([tenantId, code])
+  @@index([customerId])
   @@map("gift_cards")
+}
+
+model GiftCardTransaction {
+  id           String                  @id @default(uuid())
+  tenantId     String                  @map("tenant_id")
+  giftCardId   String                  @map("gift_card_id")
+  orderId      String?                 @map("order_id")
+  paymentId    String?                 @map("payment_id")
+  type         GiftCardTransactionType
+  amount       Decimal                 @db.Decimal(10, 2)
+  balanceAfter Decimal                 @map("balance_after") @db.Decimal(10, 2)
+  notes        String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  giftCard GiftCard @relation(fields: [giftCardId], references: [id], onDelete: Restrict)
+  order    Order?   @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  payment  Payment? @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([giftCardId])
+  @@index([orderId])
+  @@map("gift_card_transactions")
 }
