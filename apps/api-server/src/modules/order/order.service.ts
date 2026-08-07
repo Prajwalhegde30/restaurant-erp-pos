@@ -61,7 +61,7 @@ export class OrderService {
       }
     }
 
-    return await prisma.$transaction(async (tx) => {
+    const { finalOrder, createdItems } = await prisma.$transaction(async (tx) => {
       // 4. Create base order
       const order = await tx.order.create({
         data: {
@@ -157,48 +157,50 @@ export class OrderService {
         },
       });
 
-      // 6. Queue Depletion Jobs
-      for (const { orderItem } of createdItems) {
-        await DepletionProducer.queueDepletionJob({
-          tenantId,
-          branchId: data.branchId,
-          orderItemId: orderItem.id,
-        }).catch((err) => {
-          console.error('Failed to queue depletion job:', err);
-        });
-      }
-
-      // 7. Fire KDS Event
-      eventBus
-        .publish({
-          eventId: randomUUID(),
-          eventType: 'KitchenTicketCreated',
-          timestamp: new Date().toISOString(),
-          tenantId,
-          branchId: data.branchId,
-          payload: {
-            id: finalOrder.id,
-            orderNumber: finalOrder.id.slice(-6).toUpperCase(),
-            status: finalOrder.status,
-            type: finalOrder.orderType,
-            table: data.diningTableId || 'N/A', // KDS expects a string
-            waiter: userId || 'System',
-            time: finalOrder.createdAt.toISOString(),
-            items: createdItems.map(({ orderItem, menuItem }) => ({
-              id: orderItem.id,
-              name: menuItem.name,
-              quantity: orderItem.quantity,
-              modifiers: orderItem.orderItemModifierSelections.map((m) => m.modifierOptionId),
-              notes: orderItem.notes || undefined,
-            })),
-          },
-        })
-        .catch((err) => {
-          console.error('Failed to publish KitchenTicketCreated event:', err);
-        });
-
-      return finalOrder;
+      return { finalOrder, createdItems };
     });
+
+    // 6. Queue Depletion Jobs
+    for (const { orderItem } of createdItems) {
+      await DepletionProducer.queueDepletionJob({
+        tenantId,
+        branchId: data.branchId,
+        orderItemId: orderItem.id,
+      }).catch((err) => {
+        console.error('Failed to queue depletion job:', err);
+      });
+    }
+
+    // 7. Fire KDS Event
+    eventBus
+      .publish({
+        eventId: randomUUID(),
+        eventType: 'KitchenTicketCreated',
+        timestamp: new Date().toISOString(),
+        tenantId,
+        branchId: data.branchId,
+        payload: {
+          id: finalOrder.id,
+          orderNumber: finalOrder.id.slice(-6).toUpperCase(),
+          status: finalOrder.status,
+          type: finalOrder.orderType,
+          table: data.diningTableId || 'N/A', // KDS expects a string
+          waiter: userId || 'System',
+          time: finalOrder.createdAt.toISOString(),
+          items: createdItems.map(({ orderItem, menuItem }) => ({
+            id: orderItem.id,
+            name: menuItem.name,
+            quantity: orderItem.quantity,
+            modifiers: orderItem.orderItemModifierSelections.map((m) => m.modifierOptionId),
+            notes: orderItem.notes || undefined,
+          })),
+        },
+      })
+      .catch((err) => {
+        console.error('Failed to publish KitchenTicketCreated event:', err);
+      });
+
+    return finalOrder;
   }
 
   /**
