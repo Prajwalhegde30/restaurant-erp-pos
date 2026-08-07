@@ -283,6 +283,7 @@ model Tenant {
   LoyaltyLedger          LoyaltyLedger[]
   Coupon                 Coupon[]
   GiftCard               GiftCard[]
+  CouponCustomerUsage    CouponCustomerUsage[]
 
   @@map("tenants")
 }
@@ -942,13 +943,14 @@ model Order {
 
   // Child records whose lifecycle is dictated by the order (ON DELETE Restrict per §11 for safety)
   orderItems          OrderItem[]
-  orderMergesAsParent OrderMerge[]    @relation("ParentOrder")
-  orderMergesAsChild  OrderMerge[]    @relation("ChildOrder")
-  Customer            Customer?       @relation(fields: [customerId], references: [id])
+  orderMergesAsParent OrderMerge[]          @relation("ParentOrder")
+  orderMergesAsChild  OrderMerge[]          @relation("ChildOrder")
+  Customer            Customer?             @relation(fields: [customerId], references: [id])
   customerId          String?
   LoyaltyLedger       LoyaltyLedger[]
-  Coupon              Coupon?         @relation(fields: [couponId], references: [id])
+  Coupon              Coupon?               @relation(fields: [couponId], references: [id])
   couponId            String?
+  CouponCustomerUsage CouponCustomerUsage[]
 
   @@unique([tenantId, idempotencyKey])
   @@index([tenantId])
@@ -2045,11 +2047,12 @@ model Customer {
   deletedAt DateTime? @map("deleted_at")
 
   // Relations
-  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  tenant         Tenant                @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   memberships    Membership[]
   loyaltyLedgers LoyaltyLedger[]
   orders         Order[]
   invoices       Invoice[]
+  couponUsages   CouponCustomerUsage[]
 
   @@index([tenantId])
   @@index([tenantId, email])
@@ -2129,6 +2132,13 @@ model Coupon {
   maxUses     Int?      @map("max_uses")
   currentUses Int       @default(0) @map("current_uses")
 
+  maxDiscountValue   Decimal? @map("max_discount_value") @db.Decimal(10, 2)
+  isStackable        Boolean  @default(false) @map("is_stackable")
+  maxUsesPerCustomer Int?     @map("max_uses_per_customer")
+
+  applicableCategoryIds String[] @default([]) @map("applicable_category_ids")
+  applicableItemIds     String[] @default([]) @map("applicable_item_ids")
+
   // Audit Fields
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -2140,12 +2150,31 @@ model Coupon {
   deletedAt DateTime? @map("deleted_at")
 
   // Relations
-  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  tenant Tenant                @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   orders Order[]
+  usages CouponCustomerUsage[]
 
   @@index([tenantId])
   @@index([tenantId, code])
   @@map("coupons")
+}
+
+model CouponCustomerUsage {
+  id         String   @id @default(uuid())
+  tenantId   String   @map("tenant_id")
+  couponId   String   @map("coupon_id")
+  customerId String   @map("customer_id")
+  orderId    String   @map("order_id")
+  usedAt     DateTime @default(now()) @map("used_at")
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  coupon   Coupon   @relation(fields: [couponId], references: [id], onDelete: Restrict)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([couponId, customerId])
+  @@map("coupon_customer_usages")
 }
 
 model GiftCard {
