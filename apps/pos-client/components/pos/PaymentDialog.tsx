@@ -2,7 +2,17 @@
 
 import { useState } from 'react';
 import { useProcessPayment } from '../../hooks/useOrders';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button } from '@repo/ui';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  Button,
+  Input,
+} from '@repo/ui';
+import { useApplyCoupon, useRedeemGiftCard } from '../../hooks/useCustomers';
+import { usePosStore } from '../../store/posStore';
 
 export function PaymentDialog({
   orderId,
@@ -17,7 +27,13 @@ export function PaymentDialog({
 }) {
   const [method, setMethod] = useState<'CASH' | 'CARD' | 'UPI' | 'OTHER'>('CARD');
   const [error, setError] = useState<string | null>(null);
+  const [couponCode, setCouponCode] = useState('');
+  const [giftCardCode, setGiftCardCode] = useState('');
+
+  const { activeCustomerId } = usePosStore();
   const processPaymentMutation = useProcessPayment();
+  const applyCouponMutation = useApplyCoupon();
+  const redeemGiftCardMutation = useRedeemGiftCard();
 
   const handleSettle = () => {
     processPaymentMutation.mutate(
@@ -46,10 +62,68 @@ export function PaymentDialog({
           <DialogTitle>Settle Bill</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col items-center justify-center py-6">
+        <div className="flex flex-col items-center justify-center py-6 border-b">
           <div className="text-sm text-muted-foreground mb-1">Amount Due</div>
           <div className="text-4xl font-bold">${amount.toFixed(2)}</div>
         </div>
+
+        {activeCustomerId && (
+          <div className="flex flex-col gap-3 py-4 border-b">
+            <div className="text-sm font-semibold">Apply Offers</div>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Coupon Code"
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value)}
+                className="flex-1"
+              />
+              <Button
+                variant="secondary"
+                disabled={!couponCode || applyCouponMutation.isPending}
+                onClick={() => {
+                  applyCouponMutation.mutate(
+                    { customerId: activeCustomerId, code: couponCode, orderId },
+                    {
+                      onSuccess: () => {
+                        setCouponCode('');
+                        setError(null);
+                      },
+                      onError: (err: Error) => setError(err.message),
+                    },
+                  );
+                }}
+              >
+                Apply Coupon
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Gift Card Code"
+                value={giftCardCode}
+                onChange={(e) => setGiftCardCode(e.target.value)}
+                className="flex-1"
+              />
+              <Button
+                variant="secondary"
+                disabled={!giftCardCode || redeemGiftCardMutation.isPending}
+                onClick={() => {
+                  redeemGiftCardMutation.mutate(
+                    { customerId: activeCustomerId, code: giftCardCode, orderId, amount },
+                    {
+                      onSuccess: () => {
+                        setGiftCardCode('');
+                        setError(null);
+                      },
+                      onError: (err: Error) => setError(err.message),
+                    },
+                  );
+                }}
+              >
+                Redeem Card
+              </Button>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-4 py-4">
           <Button

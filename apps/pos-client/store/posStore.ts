@@ -15,6 +15,8 @@ interface PosState {
   activeOrderId: string | null; // If an order already exists for this table
   activeOrderVersion: number | null;
   activeOrderTotal: number | null;
+  activeCustomerId: string | null;
+  activeCustomerName: string | null;
   cartItems: CartItem[];
 
   setActiveTable: (
@@ -23,6 +25,7 @@ interface PosState {
     version?: number | null,
     totalAmount?: number | null,
   ) => void;
+  setActiveCustomer: (customerId: string | null, customerName?: string | null) => void;
   addItem: (item: Omit<CartItem, 'id'>) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
@@ -34,6 +37,8 @@ export const usePosStore = create<PosState>((set) => ({
   activeOrderId: null,
   activeOrderVersion: null,
   activeOrderTotal: null,
+  activeCustomerId: null,
+  activeCustomerName: null,
   cartItems: [],
 
   setActiveTable: (tableId, orderId = null, version = null, totalAmount = null) =>
@@ -42,6 +47,13 @@ export const usePosStore = create<PosState>((set) => ({
       activeOrderId: orderId,
       activeOrderVersion: version,
       activeOrderTotal: totalAmount,
+      // We do not clear customer here, it's tied to the table/order logic
+    }),
+
+  setActiveCustomer: (customerId, customerName = null) =>
+    set({
+      activeCustomerId: customerId,
+      activeCustomerName: customerName,
     }),
 
   addItem: (item) =>
@@ -69,5 +81,13 @@ export const usePosStore = create<PosState>((set) => ({
       cartItems: state.cartItems.map((i) => (i.id === id ? { ...i, quantity } : i)),
     })),
 
-  clearCart: () => set({ cartItems: [] }),
+  clearCart: () =>
+    set({
+      cartItems: [],
+      activeOrderId: null,
+      activeOrderTotal: null,
+      activeOrderVersion: null,
+      activeCustomerId: null,
+      activeCustomerName: null,
+    }),
 }));

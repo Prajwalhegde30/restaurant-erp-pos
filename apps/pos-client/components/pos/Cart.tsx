@@ -4,6 +4,7 @@ import { usePosStore } from '../../store/posStore';
 import { useCreateOrder } from '../../hooks/useOrders';
 import { Button, Card, CardContent, CardHeader, CardTitle, CardFooter } from '@repo/ui';
 import { PaymentDialog } from './PaymentDialog';
+import { CustomerSearch } from './CustomerSearch';
 import { useState, useEffect } from 'react';
 
 export function Cart({ branchId }: { branchId: string }) {
@@ -12,6 +13,7 @@ export function Cart({ branchId }: { branchId: string }) {
     activeOrderId,
     activeOrderVersion,
     activeOrderTotal,
+    activeCustomerId,
     cartItems,
     removeItem,
     updateQuantity,
@@ -47,6 +49,7 @@ export function Cart({ branchId }: { branchId: string }) {
       {
         branchId,
         tableId: activeTableId,
+        customerId: activeCustomerId || undefined,
         orderType: 'DINE_IN',
         items: cartItems.map((item) => ({
           menuItemId: item.menuItemId,
@@ -78,6 +81,8 @@ export function Cart({ branchId }: { branchId: string }) {
           </Button>
         </CardTitle>
       </CardHeader>
+
+      <CustomerSearch />
 
       <CardContent className="flex-1 overflow-y-auto p-4 p-0">
         {cartItems.length === 0 ? (
