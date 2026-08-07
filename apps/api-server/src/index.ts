@@ -27,6 +27,7 @@ import { goodsReceiptRouter } from './modules/inventory/goods-receipt.router';
 import { shiftRouter } from './modules/finance/shift.router';
 import { dailyClosingRouter } from './modules/finance/daily-closing.router';
 import { analyticsRouter } from './modules/analytics/analytics.router';
+import { auditRouter } from './modules/audit/audit.router';
 import { initEventBus, closeEventBus } from './lib/eventBus';
 import { startDepletionWorker } from './modules/inventory/workers/depletion.worker';
 
@@ -92,6 +93,9 @@ app.use('/api/v1/goods-receipts', goodsReceiptRouter);
 
 // Analytics / Reports
 app.use('/api/v1/reports', analyticsRouter);
+
+// Audit
+app.use('/api/v1/audit-logs', auditRouter);
 
 // Global Error Handler (must be after routes)
 app.use(errorHandler);
