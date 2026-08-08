@@ -1,5 +1,4 @@
 import { prisma } from '@repo/database';
-import { CouponType, CouponStatus, OrderStatus } from '@repo/database';
 
 export class CouponService {
   /**
@@ -20,7 +19,7 @@ export class CouponService {
         throw new Error('Coupon not found or invalid');
       }
 
-      if (coupon.status !== CouponStatus.ACTIVE) {
+      if (coupon.status !== 'ACTIVE') {
         throw new Error(`Coupon is ${coupon.status.toLowerCase()}`);
       }
 
@@ -101,7 +100,7 @@ export class CouponService {
       const value = Number(coupon.value);
 
       switch (coupon.type) {
-        case CouponType.PERCENTAGE:
+        case 'PERCENTAGE':
           discountAmount = applicableSubtotal * (value / 100);
           if (
             coupon.maxDiscountValue !== null &&
@@ -110,10 +109,10 @@ export class CouponService {
             discountAmount = Number(coupon.maxDiscountValue);
           }
           break;
-        case CouponType.FIXED_AMOUNT:
+        case 'FIXED_AMOUNT':
           discountAmount = value;
           break;
-        case CouponType.BOGO:
+        case 'BOGO':
           // Standard BOGO: 100% off cheapest applicable item
           if (applicableItems.length >= 2) {
             const cheapestItem = [...applicableItems].sort(
@@ -183,7 +182,7 @@ export class CouponService {
 
       const coupon = order.Coupon;
 
-      if (order.status !== OrderStatus.PAID) {
+      if (order.status !== 'PAID') {
         throw new Error('Coupon can only be redeemed on PAID orders');
       }
 

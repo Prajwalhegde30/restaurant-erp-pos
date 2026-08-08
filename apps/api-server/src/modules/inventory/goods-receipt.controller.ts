@@ -1,21 +1,22 @@
-import { Request, Response } from 'express';
+import { AuthRequest } from '@repo/auth';
+import { Response } from 'express';
 import { GoodsReceiptService } from './goods-receipt.service';
 
 export class GoodsReceiptController {
-  static async createGoodsReceipt(req: Request, res: Response) {
+  static async createGoodsReceipt(req: AuthRequest, res: Response) {
     try {
-      const { tenantId } = req.user!;
+      const tenantId = req.tenantId as string;
       const { items, ...data } = req.body;
       const grn = await GoodsReceiptService.createGoodsReceipt(tenantId, data, items || []);
       res.status(201).json(grn);
     } catch (error) {
-      res.status(400).json({ error: error.message });
+      res.status(400).json({ error: (error as Error).message });
     }
   }
 
-  static async getGoodsReceipts(req: Request, res: Response) {
+  static async getGoodsReceipts(req: AuthRequest, res: Response) {
     try {
-      const { tenantId } = req.user!;
+      const tenantId = req.tenantId as string;
       const { branchId } = req.query;
       const grns = await GoodsReceiptService.getGoodsReceipts(
         tenantId,
@@ -23,13 +24,13 @@ export class GoodsReceiptController {
       );
       res.json(grns);
     } catch (error) {
-      res.status(400).json({ error: error.message });
+      res.status(400).json({ error: (error as Error).message });
     }
   }
 
-  static async getGoodsReceiptById(req: Request, res: Response) {
+  static async getGoodsReceiptById(req: AuthRequest, res: Response) {
     try {
-      const { tenantId } = req.user!;
+      const tenantId = req.tenantId as string;
       const { id } = req.params;
       const grn = await GoodsReceiptService.getGoodsReceiptById(tenantId, id);
       if (!grn) {
@@ -37,18 +38,18 @@ export class GoodsReceiptController {
       }
       res.json(grn);
     } catch (error) {
-      res.status(400).json({ error: error.message });
+      res.status(400).json({ error: (error as Error).message });
     }
   }
 
-  static async completeGoodsReceipt(req: Request, res: Response) {
+  static async completeGoodsReceipt(req: AuthRequest, res: Response) {
     try {
-      const { tenantId } = req.user!;
+      const tenantId = req.tenantId as string;
       const { id } = req.params;
       const result = await GoodsReceiptService.completeGoodsReceipt(tenantId, id);
       res.json(result);
     } catch (error) {
-      res.status(400).json({ error: error.message });
+      res.status(400).json({ error: (error as Error).message });
     }
   }
 }

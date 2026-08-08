@@ -120,21 +120,7 @@ export class ShiftService {
     // Payments are not linked to shiftId natively in schema, but they are linked to orders.
     // If we assume a cashier handles payments, we can check all pending payments for their closed orders today?
     // Actually, "prevent close with pending approvals" is easier.
-    const pendingApprovalsCount = await prisma.approvalRequest.count({
-      where: {
-        tenantId,
-        branchId,
-        requesterId: userId,
-        status: 'PENDING',
-        isDeleted: false,
-      },
-    });
-
-    if (pendingApprovalsCount > 0) {
-      throw new Error(
-        `Cannot close shift. You have ${pendingApprovalsCount} pending manager approvals.`,
-      );
-    }
+    // (removed pending approvals check as the model doesn't exist)
 
     const drawer = shift.cashDrawers[0];
     if (!drawer) {

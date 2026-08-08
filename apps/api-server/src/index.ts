@@ -43,7 +43,29 @@ const port = process.env.PORT || 3001;
 import { idempotencyMiddleware } from './middleware/idempotency.middleware';
 
 // Global Middlewares
-app.use(cors());
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
+  : [];
+
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    if (!origin) {
+      if (process.env.NODE_ENV === 'production') {
+        return callback(new Error('Not allowed by CORS'));
+      }
+      return callback(null, true);
+    }
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(loggerMiddleware as unknown as express.RequestHandler);
 

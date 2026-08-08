@@ -7,7 +7,7 @@ export class OrderController {
   static async create(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const tenantId = req.tenantId;
-      const idempotencyKey = req.headers['idempotency-key'] as string;
+      const idempotencyKey = req.headers?.['idempotency-key'] as string;
       const userId = req.userId;
 
       if (!tenantId) throw new Error('Tenant context missing');

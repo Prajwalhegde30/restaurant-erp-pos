@@ -4,6 +4,8 @@ import { TableMap } from '../../components/pos/TableMap';
 import { MenuCatalog } from '../../components/pos/MenuCatalog';
 import { Cart } from '../../components/pos/Cart';
 import { usePosStore } from '../../store/posStore';
+import { EmptyState } from '@repo/ui';
+import { UtensilsCrossed } from 'lucide-react';
 
 // In a real application, branchId would come from user session/context
 const MOCK_BRANCH_ID = 'branch-uuid-1';
@@ -31,30 +33,16 @@ export default function PosPage() {
       </div>
 
       {/* Right pane: Always Cart */}
-      <div className="w-[350px] shrink-0 bg-white dark:bg-zinc-900 shadow-xl z-20">
+      <div className="w-[350px] shrink-0 bg-white dark:bg-zinc-900 shadow-[0_0_40px_-15px_rgba(0,0,0,0.1)] z-20 flex flex-col h-full border-l border-zinc-200 dark:border-zinc-800">
         {activeTableId ? (
           <Cart branchId={MOCK_BRANCH_ID} />
         ) : (
-          <div className="h-full flex flex-col items-center justify-center p-8 text-center text-muted-foreground bg-muted/20">
-            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
-                <path d="M7 2v20" />
-                <path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" />
-              </svg>
-            </div>
-            <p>No table selected.</p>
-            <p className="text-sm mt-2">Select a table from the map to open the cart.</p>
+          <div className="h-full flex flex-col p-4 bg-muted/10">
+            <EmptyState
+              icon={UtensilsCrossed}
+              title="No table selected"
+              description="Select a table from the map to open the cart and start taking orders."
+            />
           </div>
         )}
       </div>

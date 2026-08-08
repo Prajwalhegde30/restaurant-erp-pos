@@ -51,6 +51,10 @@ export class AuthController {
           roleId: primaryRole,
           branchId: primaryBranch,
         },
+        {
+          sub: user.id,
+          tenantId: user.tenantId,
+        },
         config,
       );
 

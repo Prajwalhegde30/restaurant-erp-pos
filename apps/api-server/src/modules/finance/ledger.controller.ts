@@ -1,9 +1,10 @@
-import { Request, Response } from 'express';
+import { AuthRequest } from '@repo/auth';
+import { Response } from 'express';
 import { LedgerService } from './ledger.service';
 import { CreateJournalSchema } from './ledger.schema';
 
 export class LedgerController {
-  static async getJournalEntries(req: Request, res: Response) {
+  static async getJournalEntries(req: AuthRequest, res: Response) {
     try {
       const tenantId = req.tenantId as string;
       const { journalId, ledgerAccountId } = req.query;
@@ -22,7 +23,7 @@ export class LedgerController {
     }
   }
 
-  static async getLedgerAccounts(req: Request, res: Response) {
+  static async getLedgerAccounts(req: AuthRequest, res: Response) {
     try {
       const tenantId = req.tenantId as string;
       const accounts = await LedgerService.getLedgerAccounts(tenantId);
@@ -35,7 +36,7 @@ export class LedgerController {
     }
   }
 
-  static async postJournal(req: Request, res: Response) {
+  static async postJournal(req: AuthRequest, res: Response) {
     try {
       const tenantId = req.tenantId as string;
       const userId = req.userId as string; // from auth middleware
@@ -45,7 +46,7 @@ export class LedgerController {
         return res.status(400).json({
           success: false,
           error: 'Validation Error',
-          details: parseResult.error.errors,
+          details: parseResult.error.issues,
         });
       }
 

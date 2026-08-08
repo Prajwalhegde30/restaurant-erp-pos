@@ -1,11 +1,12 @@
-import { Request, Response } from 'express';
+import { AuthRequest } from '@repo/auth';
+import { Response } from 'express';
 import { InvoiceService } from './invoice.service';
 
 export class InvoiceController {
-  static async getInvoices(req: Request, res: Response) {
+  static async getInvoices(req: AuthRequest, res: Response) {
     try {
       const tenantId = req.tenantId as string;
-      const branchId = req.query.branchId as string | undefined;
+      const branchId = req.query.branchId as string as string | undefined;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
       const cursor = req.query.cursor as string | undefined;
 
@@ -24,7 +25,7 @@ export class InvoiceController {
     }
   }
 
-  static async getInvoiceById(req: Request, res: Response) {
+  static async getInvoiceById(req: AuthRequest, res: Response) {
     try {
       const tenantId = req.tenantId as string;
       const id = req.params.id;

@@ -100,6 +100,7 @@ export function Cart({ branchId }: { branchId: string }) {
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6 rounded-sm"
+                      aria-label="Decrease quantity"
                       onClick={() =>
                         item.quantity > 1
                           ? updateQuantity(item.id, item.quantity - 1)
@@ -113,6 +114,7 @@ export function Cart({ branchId }: { branchId: string }) {
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6 rounded-sm"
+                      aria-label="Increase quantity"
                       onClick={() => updateQuantity(item.id, item.quantity + 1)}
                     >
                       +

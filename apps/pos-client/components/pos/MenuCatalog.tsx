@@ -3,7 +3,17 @@
 import { useState } from 'react';
 import { useCategories, useMenuItems } from '../../hooks/useCatalog';
 import { usePosStore } from '../../store/posStore';
-import { Tabs, TabsList, TabsTrigger, Card, CardContent, Button } from '@repo/ui';
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  Card,
+  CardContent,
+  Button,
+  Skeleton,
+  EmptyState,
+} from '@repo/ui';
+import { LayoutGrid } from 'lucide-react';
 
 export function MenuCatalog({ branchId }: { branchId: string }) {
   const { activeTableId, addItem } = usePosStore();
@@ -31,7 +41,11 @@ export function MenuCatalog({ branchId }: { branchId: string }) {
   return (
     <div className="flex-1 flex flex-col p-4 overflow-hidden h-full">
       {catsLoading ? (
-        <div>Loading categories...</div>
+        <div className="flex gap-2 w-full mb-4">
+          <Skeleton className="h-10 w-24" />
+          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-10 w-28" />
+        </div>
       ) : (
         <Tabs
           value={activeCategoryId || ''}
@@ -48,7 +62,25 @@ export function MenuCatalog({ branchId }: { branchId: string }) {
 
           <div className="flex-1 overflow-y-auto pt-4 min-h-0">
             {itemsLoading ? (
-              <div>Loading items...</div>
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-20">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                  <Card
+                    key={i}
+                    className="overflow-hidden flex flex-col h-full border-zinc-200 dark:border-zinc-800"
+                  >
+                    <Skeleton className="h-32 w-full rounded-none" />
+                    <CardContent className="p-4 flex flex-col flex-1 gap-2">
+                      <Skeleton className="h-5 w-3/4" />
+                      <Skeleton className="h-4 w-full mt-2" />
+                      <Skeleton className="h-4 w-5/6" />
+                      <div className="flex justify-between items-center mt-auto pt-4">
+                        <Skeleton className="h-5 w-16" />
+                        <Skeleton className="h-8 w-16" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             ) : (
               <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-20">
                 {itemsList.map(
@@ -60,13 +92,16 @@ export function MenuCatalog({ branchId }: { branchId: string }) {
                     description?: string | null;
                     basePrice: number;
                   }) => (
-                    <Card key={item.id} className="overflow-hidden flex flex-col h-full">
-                      <div className="h-32 bg-muted flex items-center justify-center relative">
+                    <Card
+                      key={item.id}
+                      className="overflow-hidden flex flex-col h-full border-zinc-200 dark:border-zinc-800 transition-all hover:shadow-md hover:border-zinc-300 dark:hover:border-zinc-700 group cursor-pointer"
+                    >
+                      <div className="h-32 bg-muted flex items-center justify-center relative overflow-hidden">
                         {item.image ? (
                           <img
                             src={item.image}
                             alt={item.name}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300"
                           />
                         ) : (
                           <span className="text-muted-foreground text-xs uppercase tracking-widest">
@@ -106,8 +141,12 @@ export function MenuCatalog({ branchId }: { branchId: string }) {
                   ),
                 )}
                 {itemsList.length === 0 && (
-                  <div className="col-span-full py-12 text-center text-muted-foreground">
-                    No items in this category
+                  <div className="col-span-full py-12">
+                    <EmptyState
+                      icon={LayoutGrid}
+                      title="No items found"
+                      description="This category currently has no menu items assigned to it."
+                    />
                   </div>
                 )}
               </div>

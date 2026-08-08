@@ -106,8 +106,8 @@ export const idempotencyMiddleware = async (req: Request, res: Response, next: N
     };
 
     next();
-  } catch (error) {
-    logger.error('Idempotency middleware error:', error);
+  } catch (err) {
+    logger.error({ error: err as Error }, 'Idempotency middleware error:');
     // On Redis failure, fail-closed for safety.
     return res.status(500).json({
       error: {

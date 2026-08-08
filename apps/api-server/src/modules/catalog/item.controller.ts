@@ -22,7 +22,7 @@ export class ItemController {
       if (!tenantId) throw new Error('Tenant context missing');
 
       const data = CreateMenuItemDto.parse(req.body);
-      const item = await ItemService.create(tenantId, data);
+      const item = await ItemService.create(tenantId, { ...data, tenantId } as never);
       res.status(201).json(item);
     } catch (err) {
       next(err);

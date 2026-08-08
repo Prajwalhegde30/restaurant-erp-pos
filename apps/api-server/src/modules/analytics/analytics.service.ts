@@ -1,5 +1,5 @@
 import { prisma } from '@repo/database';
-import { AnalyticsSnapshotType, Prisma } from '@repo/types/src/generated';
+import { Prisma } from '@repo/database';
 
 export class AnalyticsService {
   static async getPmixReport(
@@ -12,7 +12,7 @@ export class AnalyticsService {
   ) {
     const where: Prisma.AnalyticsSnapshotWhereInput = {
       tenantId,
-      type: AnalyticsSnapshotType.PMIX,
+      type: 'PMIX',
     };
     if (branchId) where.branchId = branchId;
     if (startDate || endDate) {
@@ -50,7 +50,7 @@ export class AnalyticsService {
   ) {
     const where: Prisma.AnalyticsSnapshotWhereInput = {
       tenantId,
-      type: AnalyticsSnapshotType.LABOR_TO_SALES,
+      type: 'LABOR_TO_SALES',
     };
     if (branchId) where.branchId = branchId;
     if (startDate || endDate) {

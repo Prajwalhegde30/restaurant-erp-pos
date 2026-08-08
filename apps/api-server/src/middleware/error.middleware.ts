@@ -9,7 +9,7 @@ export function errorHandler(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   next: NextFunction,
 ) {
-  const correlationId = (req.headers['x-correlation-id'] as string) || 'unknown';
+  const correlationId = (req.headers?.['x-correlation-id'] as string) || 'unknown';
 
   // Log the error
   if (req.logger) {
@@ -28,7 +28,7 @@ export function errorHandler(
         type: 'validation_error',
         code: 'invalid_parameter',
         message: 'Request payload validation failed.',
-        details: err.errors.map((e) => ({
+        details: err.issues.map((e: { path: string[]; message: string }) => ({
           field: e.path.join('.'),
           issue: e.message,
         })),
@@ -67,7 +67,7 @@ export function errorHandler(
       error: {
         type: 'authorization_error',
         code: 'forbidden',
-        message: err.message || 'You do not have permission to access this resource.',
+        message: (err as Error).message || 'You do not have permission to access this resource.',
         correlation_id: correlationId,
       },
     });

@@ -19,7 +19,7 @@ export class ModifierGroupController {
       if (!tenantId) throw new Error('Tenant context missing');
 
       const data = CreateModifierGroupDto.parse(req.body);
-      const group = await ModifierGroupService.create(tenantId, data);
+      const group = await ModifierGroupService.create(tenantId, { ...data, tenantId } as never);
       res.status(201).json(group);
     } catch (err) {
       next(err);

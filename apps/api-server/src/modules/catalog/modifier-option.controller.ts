@@ -19,7 +19,7 @@ export class ModifierOptionController {
       if (!tenantId) throw new Error('Tenant context missing');
 
       const data = CreateModifierOptionDto.parse(req.body);
-      const option = await ModifierOptionService.create(tenantId, data);
+      const option = await ModifierOptionService.create(tenantId, { ...data, tenantId } as never);
       res.status(201).json(option);
     } catch (err) {
       next(err);

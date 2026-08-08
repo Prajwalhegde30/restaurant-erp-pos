@@ -2,7 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Store, Users, Shield, Settings, LayoutDashboard, Utensils } from 'lucide-react';
+import {
+  Store,
+  Users,
+  Shield,
+  Settings,
+  LayoutDashboard,
+  Utensils,
+  ChevronRight,
+} from 'lucide-react';
 
 const navItems = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
@@ -28,14 +36,17 @@ export function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
-              className={`flex items-center space-x-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+              className={`flex items-center space-x-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 group ${
                 isActive
-                  ? 'bg-primary text-primary-foreground'
+                  ? 'bg-primary/10 text-primary hover:bg-primary/15'
                   : 'hover:bg-accent hover:text-accent-foreground text-muted-foreground'
               }`}
             >
-              <item.icon className="h-4 w-4" />
-              <span>{item.name}</span>
+              <item.icon
+                className={`h-5 w-5 ${isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-accent-foreground'}`}
+              />
+              <span className="flex-1">{item.name}</span>
+              {isActive && <ChevronRight className="h-4 w-4 opacity-70" />}
             </Link>
           );
         })}

@@ -1,5 +1,5 @@
 import { prisma } from '@repo/database';
-import { Prisma } from '@repo/types/src/generated';
+import { Prisma } from '@repo/database';
 
 export class AuditService {
   static async getAuditLogs(

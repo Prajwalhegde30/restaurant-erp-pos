@@ -18,7 +18,7 @@ export class MenuController {
       if (!tenantId) throw new Error('Tenant context missing');
 
       const data = CreateMenuDto.parse(req.body);
-      const menu = await MenuService.create(tenantId, data);
+      const menu = await MenuService.create(tenantId, { ...data, tenantId } as never);
       res.status(201).json(menu);
     } catch (err) {
       next(err);

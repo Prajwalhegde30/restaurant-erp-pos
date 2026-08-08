@@ -129,62 +129,64 @@ export default function BranchesPage() {
         </Button>
       </div>
 
-      <div className="rounded-md border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Currency</TableHead>
-              <TableHead>Timezone</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {branches.map((branch) => (
-              <TableRow key={branch.id}>
-                <TableCell className="font-medium">{branch.name}</TableCell>
-                <TableCell>{branch.currency}</TableCell>
-                <TableCell>{branch.timezone}</TableCell>
-                <TableCell>
-                  <Badge variant={!branch.isDeleted ? 'default' : 'secondary'}>
-                    {!branch.isDeleted ? 'ACTIVE' : 'DELETED'}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleOpenForm(branch)}
-                    disabled={deleteMutation.isPending || saveMutation.isPending}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => setDeleteId(branch.id)}
-                    disabled={deleteMutation.isPending || saveMutation.isPending}
-                  >
-                    Delete
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            {branches.length === 0 && (
+      <div className="rounded-md border bg-card overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader className="bg-muted/50">
               <TableRow>
-                <TableCell colSpan={5} className="h-24">
-                  <EmptyState
-                    title="No branches found"
-                    description="You haven't created any branches yet."
-                    actionLabel="Add Branch"
-                    onAction={() => handleOpenForm()}
-                  />
-                </TableCell>
+                <TableHead>Name</TableHead>
+                <TableHead>Currency</TableHead>
+                <TableHead>Timezone</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {branches.map((branch) => (
+                <TableRow key={branch.id} className="hover:bg-muted/50 transition-colors">
+                  <TableCell className="font-medium">{branch.name}</TableCell>
+                  <TableCell>{branch.currency}</TableCell>
+                  <TableCell>{branch.timezone}</TableCell>
+                  <TableCell>
+                    <Badge variant={!branch.isDeleted ? 'default' : 'secondary'}>
+                      {!branch.isDeleted ? 'ACTIVE' : 'DELETED'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenForm(branch)}
+                      disabled={deleteMutation.isPending || saveMutation.isPending}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setDeleteId(branch.id)}
+                      disabled={deleteMutation.isPending || saveMutation.isPending}
+                    >
+                      Delete
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {branches.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-24">
+                    <EmptyState
+                      title="No branches found"
+                      description="You haven't created any branches yet."
+                      actionLabel="Add Branch"
+                      onAction={() => handleOpenForm()}
+                    />
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       <Dialog open={isFormOpen} onOpenChange={(open) => !open && handleCloseForm()}>
@@ -195,20 +197,42 @@ export default function BranchesPage() {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input id="name" {...register('name')} disabled={isSubmitting} />
+                <Label htmlFor="name">
+                  Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  placeholder="e.g. Downtown Branch"
+                  autoFocus
+                  {...register('name')}
+                  disabled={isSubmitting}
+                />
                 {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="currency">Currency</Label>
-                <Input id="currency" {...register('currency')} disabled={isSubmitting} />
+                <Label htmlFor="currency">
+                  Currency <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="currency"
+                  placeholder="e.g. USD"
+                  {...register('currency')}
+                  disabled={isSubmitting}
+                />
                 {errors.currency && (
                   <p className="text-xs text-destructive">{errors.currency.message}</p>
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="timezone">Timezone</Label>
-                <Input id="timezone" {...register('timezone')} disabled={isSubmitting} />
+                <Label htmlFor="timezone">
+                  Timezone <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="timezone"
+                  placeholder="e.g. America/New_York"
+                  {...register('timezone')}
+                  disabled={isSubmitting}
+                />
                 {errors.timezone && (
                   <p className="text-xs text-destructive">{errors.timezone.message}</p>
                 )}
@@ -224,7 +248,7 @@ export default function BranchesPage() {
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Saving...' : 'Save'}
+                {isSubmitting ? 'Saving...' : 'Save Changes'}
               </Button>
             </DialogFooter>
           </form>

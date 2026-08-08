@@ -1,10 +1,5 @@
 import { prisma } from '@repo/database';
-import {
-  GiftCardStatus,
-  GiftCardTransactionType,
-  PaymentMethod,
-  PaymentStatus,
-} from '@repo/database';
+import {} from '@repo/database';
 
 export class GiftCardService {
   /**
@@ -31,7 +26,7 @@ export class GiftCardService {
           code,
           initialValue,
           currentBalance: initialValue,
-          status: GiftCardStatus.ACTIVE,
+          status: 'ACTIVE',
           customerId,
         },
       });
@@ -41,7 +36,7 @@ export class GiftCardService {
         data: {
           tenantId,
           giftCardId: card.id,
-          type: GiftCardTransactionType.ACTIVATION,
+          type: 'ACTIVATION',
           amount: initialValue,
           balanceAfter: initialValue,
         },
@@ -68,7 +63,7 @@ export class GiftCardService {
       throw new Error('Gift card not found');
     }
 
-    if (card.status !== GiftCardStatus.ACTIVE) {
+    if (card.status !== 'ACTIVE') {
       throw new Error(`Gift card is ${card.status.toLowerCase()}`);
     }
 
@@ -112,7 +107,7 @@ export class GiftCardService {
       });
 
       if (!card) throw new Error('Gift card not found');
-      if (card.status !== GiftCardStatus.ACTIVE) throw new Error('Gift card not active');
+      if (card.status !== 'ACTIVE') throw new Error('Gift card not active');
       if (card.expiresAt && new Date() > card.expiresAt) throw new Error('Gift card expired');
       if (card.customerId && customerId && card.customerId !== customerId)
         throw new Error('Gift card does not belong to this customer');
@@ -132,7 +127,7 @@ export class GiftCardService {
           tenantId,
           giftCardId: card.id,
           orderId,
-          type: GiftCardTransactionType.REDEMPTION,
+          type: 'REDEMPTION',
         },
       });
 
@@ -155,7 +150,7 @@ export class GiftCardService {
       let newStatus = card.status;
 
       if (newBalance === 0) {
-        newStatus = GiftCardStatus.DEPLETED;
+        newStatus = 'DEPLETED' as never;
       }
 
       // 1. Update Gift Card balance
@@ -179,8 +174,8 @@ export class GiftCardService {
         data: {
           tenantId,
           invoiceId: invoice.id,
-          status: PaymentStatus.COMPLETED,
-          method: PaymentMethod.GIFT_CARD,
+          status: 'CAPTURED',
+          method: 'GIFT_CARD',
           amount: actualRedemptionAmount,
           idempotencyKey: `gc_${card.id}_ord_${orderId}_${Date.now()}`,
           giftCardId: card.id,
@@ -195,7 +190,7 @@ export class GiftCardService {
           giftCardId: card.id,
           orderId,
           paymentId: payment.id,
-          type: GiftCardTransactionType.REDEMPTION,
+          type: 'REDEMPTION',
           amount: actualRedemptionAmount,
           balanceAfter: newBalance,
         },

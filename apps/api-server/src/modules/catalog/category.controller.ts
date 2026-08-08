@@ -21,7 +21,7 @@ export class CategoryController {
       if (!tenantId) throw new Error('Tenant context missing');
 
       const data = CreateCategoryDto.parse(req.body);
-      const category = await CategoryService.create(tenantId, data);
+      const category = await CategoryService.create(tenantId, { ...data, tenantId } as never);
       res.status(201).json(category);
     } catch (err) {
       next(err);

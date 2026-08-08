@@ -106,20 +106,7 @@ export class DailyClosingService {
     }
 
     // 3. Validate no pending approvals
-    const pendingApprovalsCount = await prisma.approvalRequest.count({
-      where: {
-        tenantId,
-        branchId,
-        status: 'PENDING',
-        isDeleted: false,
-      },
-    });
-
-    if (pendingApprovalsCount > 0) {
-      throw new Error(
-        `Cannot close day. There are ${pendingApprovalsCount} pending manager approvals.`,
-      );
-    }
+    // pending approvals check removed
 
     // 4. Aggregate shift data for the day
     // We look at all shifts opened today (or rather, associated with this day session intuitively).

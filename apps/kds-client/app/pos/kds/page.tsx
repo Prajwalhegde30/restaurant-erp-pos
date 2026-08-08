@@ -4,6 +4,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { TicketBoard } from '../../../components/pos/kds/TicketBoard';
 import { useKdsStore } from '../../../store/useKdsStore';
+import { toast } from 'sonner';
 import { useKdsOrders } from '../../../hooks/useKdsOrders';
 import { useKdsWebSocket } from '../../../hooks/useKdsWebSocket';
 import { fetchApi } from '../../../lib/apiClient';
@@ -57,16 +58,15 @@ function KdsContent() {
         method: 'PUT',
         body: JSON.stringify({
           status: nextStatus,
-          // Since KDS doesn't always have the full order's OCC version synced reliably in real-time right now,
-          // we might just pass 0 or the backend needs to handle it if version isn't passed.
-          // For safety in this demo, let's assume we pass the latest known version (default 0 for now)
           version: 'version' in ticket ? Number(ticket.version) : 0,
         }),
       });
+      toast.success(`Ticket bumped to ${nextStatus.replace('_', ' ')}`);
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('Failed to bump ticket, rolling back:', error);
-      // Rollback optimistic update
       updateTicketStatus(ticketId, ticket.status);
+      toast.error(`Failed to bump ticket: ${errorMessage}`);
     }
   };
 

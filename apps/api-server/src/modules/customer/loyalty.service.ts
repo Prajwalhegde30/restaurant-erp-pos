@@ -1,5 +1,4 @@
 import { prisma } from '@repo/database';
-import { MembershipTier, LoyaltyTransactionType, OrderStatus } from '@repo/database';
 
 export class LoyaltyService {
   /**
@@ -25,7 +24,7 @@ export class LoyaltyService {
         return null; // No customer attached, no points
       }
 
-      if (order.status !== OrderStatus.PAID) {
+      if (order.status !== 'PAID') {
         throw new Error('Points can only be accrued for PAID orders');
       }
 
@@ -34,7 +33,7 @@ export class LoyaltyService {
         where: {
           tenantId,
           orderId,
-          type: LoyaltyTransactionType.EARNED,
+          type: 'EARNED',
           isDeleted: false,
         },
       });
@@ -52,19 +51,19 @@ export class LoyaltyService {
       const membership = order.Customer.memberships.find(
         (m) => m.tenantId === tenantId && m.isDeleted === false,
       );
-      const tier = membership?.tier || MembershipTier.BASIC;
+      const tier = membership?.tier || 'BASIC';
 
       switch (tier) {
-        case MembershipTier.BASIC:
+        case 'BASIC':
           multiplier = 1.0;
           break;
-        case MembershipTier.SILVER:
+        case 'SILVER':
           multiplier = 1.2;
           break;
-        case MembershipTier.GOLD:
+        case 'GOLD':
           multiplier = 1.5;
           break;
-        case MembershipTier.PLATINUM:
+        case 'PLATINUM':
           multiplier = 2.0;
           break;
       }
@@ -78,7 +77,7 @@ export class LoyaltyService {
           customerId: order.customerId,
           orderId,
           points: pointsEarned,
-          type: LoyaltyTransactionType.EARNED,
+          type: 'EARNED',
           reason: `Accrual for Order ${orderId}`,
           createdBy: userId,
           updatedBy: userId,
@@ -102,15 +101,9 @@ export class LoyaltyService {
     });
 
     return ledgers.reduce((balance, entry) => {
-      if (
-        entry.type === LoyaltyTransactionType.EARNED ||
-        entry.type === LoyaltyTransactionType.ADJUSTED
-      ) {
+      if (entry.type === 'EARNED' || entry.type === 'ADJUSTED') {
         return balance + entry.points;
-      } else if (
-        entry.type === LoyaltyTransactionType.REDEEMED ||
-        entry.type === LoyaltyTransactionType.EXPIRED
-      ) {
+      } else if (entry.type === 'REDEEMED' || entry.type === 'EXPIRED') {
         return balance - entry.points;
       }
       return balance;

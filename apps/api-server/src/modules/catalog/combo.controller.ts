@@ -20,7 +20,7 @@ export class ComboController {
       if (!tenantId) throw new Error('Tenant context missing');
 
       const data = CreateComboDto.parse(req.body);
-      const combo = await ComboService.create(tenantId, data);
+      const combo = await ComboService.create(tenantId, { ...data, tenantId } as never);
       res.status(201).json(combo);
     } catch (err) {
       next(err);

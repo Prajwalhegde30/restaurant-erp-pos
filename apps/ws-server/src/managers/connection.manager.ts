@@ -30,7 +30,7 @@ export class ConnectionManager {
   public handleConnection(socket: TypedSocket) {
     const { tenantId, branchId, userId } = socket.data;
 
-    logger.info('Socket connected', { socketId: socket.id, tenantId, branchId, userId });
+    logger.info({ socketId: socket.id, tenantId, branchId, userId }, 'Socket connected');
 
     const tenantRoom = `tenant:${tenantId}`;
     socket.join(tenantRoom);
@@ -49,13 +49,16 @@ export class ConnectionManager {
     });
 
     socket.on('disconnect', (reason) => {
-      logger.info('Socket disconnected', {
-        socketId: socket.id,
-        reason,
-        tenantId,
-        branchId,
-        userId,
-      });
+      logger.info(
+        {
+          socketId: socket.id,
+          reason,
+          tenantId,
+          branchId,
+          userId,
+        },
+        'Socket disconnected',
+      );
     });
   }
 

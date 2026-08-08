@@ -1,8 +1,8 @@
 import React from 'react';
 import { useKdsStore } from '../../../store/useKdsStore';
 import { TicketCard } from './TicketCard';
-import { Badge } from '@repo/ui';
-import { AlertCircle } from 'lucide-react';
+import { Badge, EmptyState } from '@repo/ui';
+import { AlertCircle, UtensilsCrossed } from 'lucide-react';
 
 interface TicketBoardProps {
   onBumpTicket?: (ticketId: string) => void;
@@ -21,10 +21,14 @@ export function TicketBoard({ onBumpTicket }: TicketBoardProps) {
 
   if (tickets.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full min-h-[50vh] text-slate-400">
-        <UtensilsCrossed className="w-24 h-24 mb-4 opacity-20" />
-        <h2 className="text-2xl font-semibold">Kitchen is caught up</h2>
-        <p className="mt-2 text-lg">No active tickets right now.</p>
+      <div className="flex flex-col items-center justify-center h-full min-h-[50vh] p-8 w-full">
+        <div className="max-w-md w-full">
+          <EmptyState
+            icon={UtensilsCrossed}
+            title="Kitchen is caught up"
+            description="No active tickets right now."
+          />
+        </div>
       </div>
     );
   }
@@ -78,29 +82,5 @@ export function TicketBoard({ onBumpTicket }: TicketBoardProps) {
         </div>
       </div>
     </div>
-  );
-}
-
-// Simple icon for empty state
-function UtensilsCrossed(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m16 2-2.3 2.3a3 3 0 0 0 0 4.2l1.8 1.8a3 3 0 0 0 4.2 0L22 8" />
-      <path d="M15 15 3.3 3.3a4.24 4.24 0 0 0 0 6l7.3 7.3c.7.7 2 .7 2.8 0L15 15Zm0 0 7 7" />
-      <path d="m14 14-7-7" />
-      <path d="m8 16-6 6" />
-      <path d="m2 16 6 6" />
-    </svg>
   );
 }

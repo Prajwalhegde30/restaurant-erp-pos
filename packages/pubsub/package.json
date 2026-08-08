@@ -6,7 +6,8 @@
   "types": "./src/index.ts",
   "scripts": {
     "build": "tsup src/index.ts --format cjs --clean",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@repo/logger": "*",

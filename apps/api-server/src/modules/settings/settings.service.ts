@@ -118,10 +118,10 @@ export class SettingsService {
 
     // Sort by priority manually to ensure correct merge order
     const priority = {
-      [ConfigurationLevel.GLOBAL]: 1,
-      [ConfigurationLevel.TENANT]: 2,
-      [ConfigurationLevel.BRANCH]: 3,
-      [ConfigurationLevel.STATION]: 4,
+      GLOBAL: 1,
+      TENANT: 2,
+      BRANCH: 3,
+      STATION: 4,
     };
 
     configs.sort((a, b) => priority[a.level] - priority[b.level]);

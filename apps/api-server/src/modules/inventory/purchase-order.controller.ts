@@ -1,21 +1,22 @@
-import { Request, Response } from 'express';
+import { AuthRequest } from '@repo/auth';
+import { Response } from 'express';
 import { PurchaseOrderService } from './purchase-order.service';
 
 export class PurchaseOrderController {
-  static async createPurchaseOrder(req: Request, res: Response) {
+  static async createPurchaseOrder(req: AuthRequest, res: Response) {
     try {
-      const { tenantId } = req.user!;
+      const tenantId = req.tenantId as string;
       const { items, ...data } = req.body;
       const po = await PurchaseOrderService.createPurchaseOrder(tenantId, data, items || []);
       res.status(201).json(po);
     } catch (error) {
-      res.status(400).json({ error: error.message });
+      res.status(400).json({ error: (error as Error).message });
     }
   }
 
-  static async getPurchaseOrders(req: Request, res: Response) {
+  static async getPurchaseOrders(req: AuthRequest, res: Response) {
     try {
-      const { tenantId } = req.user!;
+      const tenantId = req.tenantId as string;
       const { branchId } = req.query;
       const pos = await PurchaseOrderService.getPurchaseOrders(
         tenantId,
@@ -23,13 +24,13 @@ export class PurchaseOrderController {
       );
       res.json(pos);
     } catch (error) {
-      res.status(400).json({ error: error.message });
+      res.status(400).json({ error: (error as Error).message });
     }
   }
 
-  static async getPurchaseOrderById(req: Request, res: Response) {
+  static async getPurchaseOrderById(req: AuthRequest, res: Response) {
     try {
-      const { tenantId } = req.user!;
+      const tenantId = req.tenantId as string;
       const { id } = req.params;
       const po = await PurchaseOrderService.getPurchaseOrderById(tenantId, id);
       if (!po) {
@@ -37,19 +38,19 @@ export class PurchaseOrderController {
       }
       res.json(po);
     } catch (error) {
-      res.status(400).json({ error: error.message });
+      res.status(400).json({ error: (error as Error).message });
     }
   }
 
-  static async updatePurchaseOrderStatus(req: Request, res: Response) {
+  static async updatePurchaseOrderStatus(req: AuthRequest, res: Response) {
     try {
-      const { tenantId } = req.user!;
+      const tenantId = req.tenantId as string;
       const { id } = req.params;
       const { status } = req.body;
       const po = await PurchaseOrderService.updatePurchaseOrderStatus(tenantId, id, status);
       res.json(po);
     } catch (error) {
-      res.status(400).json({ error: error.message });
+      res.status(400).json({ error: (error as Error).message });
     }
   }
 }

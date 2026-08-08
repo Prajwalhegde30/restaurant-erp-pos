@@ -128,60 +128,62 @@ export default function CatalogPage() {
         </div>
       </div>
 
-      <div className="rounded-md border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Menu Name</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {menusList.map((menu) => (
-              <TableRow key={menu.id}>
-                <TableCell className="font-medium">{menu.name}</TableCell>
-                <TableCell>{menu.description || 'N/A'}</TableCell>
-                <TableCell>
-                  <Badge variant={menu.status === 'ACTIVE' ? 'default' : 'secondary'}>
-                    {menu.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleOpenForm(menu)}
-                    disabled={deleteMutation.isPending || saveMutation.isPending}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => setDeleteId(menu.id)}
-                    disabled={deleteMutation.isPending || saveMutation.isPending}
-                  >
-                    Delete
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            {menusList.length === 0 && (
+      <div className="rounded-md border bg-card overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader className="bg-muted/50">
               <TableRow>
-                <TableCell colSpan={4} className="h-24">
-                  <EmptyState
-                    title="No menus found"
-                    description="You haven't created any menus yet."
-                    actionLabel="Add Menu"
-                    onAction={() => handleOpenForm()}
-                  />
-                </TableCell>
+                <TableHead>Menu Name</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {menusList.map((menu) => (
+                <TableRow key={menu.id} className="hover:bg-muted/50 transition-colors">
+                  <TableCell className="font-medium">{menu.name}</TableCell>
+                  <TableCell>{menu.description || 'N/A'}</TableCell>
+                  <TableCell>
+                    <Badge variant={menu.status === 'ACTIVE' ? 'default' : 'secondary'}>
+                      {menu.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenForm(menu)}
+                      disabled={deleteMutation.isPending || saveMutation.isPending}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setDeleteId(menu.id)}
+                      disabled={deleteMutation.isPending || saveMutation.isPending}
+                    >
+                      Delete
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {menusList.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} className="h-24">
+                    <EmptyState
+                      title="No menus found"
+                      description="You haven't created any menus yet."
+                      actionLabel="Add Menu"
+                      onAction={() => handleOpenForm()}
+                    />
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       <Dialog open={isFormOpen} onOpenChange={(open) => !open && handleCloseForm()}>
@@ -192,13 +194,26 @@ export default function CatalogPage() {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Menu Name</Label>
-                <Input id="name" {...register('name')} disabled={isSubmitting} />
+                <Label htmlFor="name">
+                  Menu Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  placeholder="e.g. Summer Menu"
+                  autoFocus
+                  {...register('name')}
+                  disabled={isSubmitting}
+                />
                 {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
-                <Input id="description" {...register('description')} disabled={isSubmitting} />
+                <Input
+                  id="description"
+                  placeholder="e.g. Seasonal dishes and drinks"
+                  {...register('description')}
+                  disabled={isSubmitting}
+                />
                 {errors.description && (
                   <p className="text-xs text-destructive">{errors.description.message}</p>
                 )}
@@ -214,7 +229,7 @@ export default function CatalogPage() {
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Saving...' : 'Save'}
+                {isSubmitting ? 'Saving...' : 'Save Changes'}
               </Button>
             </DialogFooter>
           </form>

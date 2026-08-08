@@ -31,7 +31,7 @@ export class SettingsController {
       const config = await SettingsService.upsertConfiguration(
         data.level,
         data.key,
-        data.value,
+        data.value as import('@repo/database').Prisma.InputJsonValue,
         data.level === 'GLOBAL' ? null : tenantId, // GLOBAL ignores tenantId
         data.branchId,
         data.stationId,

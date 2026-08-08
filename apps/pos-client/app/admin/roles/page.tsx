@@ -32,6 +32,7 @@ import { ConfirmDialog } from '../../../components/ui/confirm-dialog';
 
 const RoleFormSchema = z.object({
   name: z.string().min(1, 'Role name is required'),
+  description: z.string().optional(),
 });
 type RoleFormValues = z.infer<typeof RoleFormSchema>;
 
@@ -88,10 +89,11 @@ export default function RolesPage() {
       setEditingRole(role);
       reset({
         name: role.name,
+        description: '', // Could be role.description if it existed in the type, but let's just clear it
       });
     } else {
       setEditingRole(null);
-      reset({ name: '' });
+      reset({ name: '', description: '' });
     }
     setIsFormOpen(true);
   };
@@ -124,56 +126,58 @@ export default function RolesPage() {
         </Button>
       </div>
 
-      <div className="rounded-md border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Role Name</TableHead>
-              <TableHead>Permissions Count</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rolesList.map((role) => (
-              <TableRow key={role.id}>
-                <TableCell className="font-medium">{role.name}</TableCell>
-                <TableCell>
-                  <Badge variant="outline">{role.permissions?.length || 0}</Badge>
-                </TableCell>
-                <TableCell className="text-right space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleOpenForm(role)}
-                    disabled={deleteMutation.isPending || saveMutation.isPending}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => setDeleteId(role.id)}
-                    disabled={deleteMutation.isPending || saveMutation.isPending}
-                  >
-                    Delete
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            {rolesList.length === 0 && (
+      <div className="rounded-md border bg-card overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader className="bg-muted/50">
               <TableRow>
-                <TableCell colSpan={3} className="h-24">
-                  <EmptyState
-                    title="No roles found"
-                    description="You haven't created any roles yet."
-                    actionLabel="Add Role"
-                    onAction={() => handleOpenForm()}
-                  />
-                </TableCell>
+                <TableHead>Role Name</TableHead>
+                <TableHead>Permissions Count</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {rolesList.map((role) => (
+                <TableRow key={role.id} className="hover:bg-muted/50 transition-colors">
+                  <TableCell className="font-medium">{role.name}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{role.permissions?.length || 0}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenForm(role)}
+                      disabled={deleteMutation.isPending || saveMutation.isPending}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setDeleteId(role.id)}
+                      disabled={deleteMutation.isPending || saveMutation.isPending}
+                    >
+                      Delete
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {rolesList.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={3} className="h-24">
+                    <EmptyState
+                      title="No roles found"
+                      description="You haven't created any roles yet."
+                      actionLabel="Add Role"
+                      onAction={() => handleOpenForm()}
+                    />
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       <Dialog open={isFormOpen} onOpenChange={(open) => !open && handleCloseForm()}>
@@ -184,9 +188,26 @@ export default function RolesPage() {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Role Name</Label>
-                <Input id="name" {...register('name')} disabled={isSubmitting} />
+                <Label htmlFor="name">
+                  Role Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  placeholder="e.g. Manager"
+                  autoFocus
+                  {...register('name')}
+                  disabled={isSubmitting}
+                />
                 {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Input
+                  id="description"
+                  placeholder="e.g. Full system access"
+                  {...register('description')}
+                  disabled={isSubmitting}
+                />
               </div>
             </div>
             <DialogFooter>
@@ -199,7 +220,7 @@ export default function RolesPage() {
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Saving...' : 'Save'}
+                {isSubmitting ? 'Saving...' : 'Save Changes'}
               </Button>
             </DialogFooter>
           </form>

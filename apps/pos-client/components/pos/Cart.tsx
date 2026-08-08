@@ -3,9 +3,10 @@
 import { usePosStore } from '../../store/posStore';
 import { useCreateOrder } from '../../hooks/useOrders';
 import { Button, Card, CardContent, CardHeader, CardTitle, CardFooter } from '@repo/ui';
+import { toast } from 'sonner';
 import { PaymentDialog } from './PaymentDialog';
 import { CustomerSearch } from './CustomerSearch';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export function Cart({ branchId }: { branchId: string }) {
   const {
@@ -21,16 +22,6 @@ export function Cart({ branchId }: { branchId: string }) {
   } = usePosStore();
   const createOrderMutation = useCreateOrder();
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-
-  // Auto-clear success message
-  useEffect(() => {
-    if (success) {
-      const t = setTimeout(() => setSuccess(null), 3000);
-      return () => clearTimeout(t);
-    }
-  }, [success]);
 
   if (!activeTableId) return null;
 
@@ -60,12 +51,10 @@ export function Cart({ branchId }: { branchId: string }) {
       {
         onSuccess: () => {
           clearCart();
-          setError(null);
-          setSuccess('Order fired successfully!');
+          toast.success('Order fired successfully!');
         },
         onError: (err: Error) => {
-          setError(`Failed to fire order: ${err.message || 'Unknown error'}`);
-          setSuccess(null);
+          toast.error(`Failed to fire order: ${err.message || 'Unknown error'}`);
         },
       },
     );
@@ -105,6 +94,7 @@ export function Cart({ branchId }: { branchId: string }) {
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6 rounded-sm"
+                      aria-label="Decrease quantity"
                       onClick={() =>
                         item.quantity > 1
                           ? updateQuantity(item.id, item.quantity - 1)
@@ -118,6 +108,7 @@ export function Cart({ branchId }: { branchId: string }) {
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6 rounded-sm"
+                      aria-label="Increase quantity"
                       onClick={() => updateQuantity(item.id, item.quantity + 1)}
                     >
                       +
@@ -145,9 +136,6 @@ export function Cart({ branchId }: { branchId: string }) {
             <span>${displayTotal.toFixed(2)}</span>
           </div>
         </div>
-
-        {error && <div className="text-sm text-destructive text-center w-full">{error}</div>}
-        {success && <div className="text-sm text-green-600 text-center w-full">{success}</div>}
 
         <div className="flex flex-col gap-2 w-full">
           <Button

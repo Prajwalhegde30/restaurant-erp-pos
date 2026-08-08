@@ -46,7 +46,7 @@ export interface AuthenticatedContext {
  *
  * Authority: CodingStandards.md §4 — Clean Architecture & transport independence.
  */
-export interface AuthRequest extends Record<string, unknown> {
+export interface AuthRequest {
   /** Optional HTTP request headers */
   headers?: {
     authorization?: string | string[];
@@ -60,6 +60,10 @@ export interface AuthRequest extends Record<string, unknown> {
   tenantId?: string;
   /** Convenience shortcut: active branch ID */
   branchId?: string | null;
+  userId?: string;
+  body?: unknown;
+  params?: unknown;
+  query?: unknown;
 }
 
 /**
@@ -72,7 +76,6 @@ export interface AuthResponse {
   json?: (data: unknown) => unknown;
   /** Send payload (Express/Fastify send) */
   send?: (data: unknown) => unknown;
-  [key: string]: unknown;
 }
 
 /**

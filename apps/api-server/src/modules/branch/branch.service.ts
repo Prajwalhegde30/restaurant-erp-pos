@@ -7,8 +7,8 @@ export class BranchService {
   static async createBranch(tenantId: string, data: Record<string, unknown>) {
     return await prisma.branch.create({
       data: {
-        ...data,
-        tenant_id: tenantId,
+        ...(data as unknown as import('@repo/database').Prisma.BranchUncheckedCreateInput),
+        tenantId: tenantId,
       },
     });
   }
@@ -19,7 +19,7 @@ export class BranchService {
   static async getBranches(tenantId: string) {
     return await prisma.branch.findMany({
       where: {
-        tenant_id: tenantId,
+        tenantId: tenantId,
         is_deleted: false,
       },
     });
@@ -32,7 +32,7 @@ export class BranchService {
     return await prisma.branch.findFirst({
       where: {
         id: branchId,
-        tenant_id: tenantId,
+        tenantId: tenantId,
         is_deleted: false,
       },
     });
@@ -45,7 +45,7 @@ export class BranchService {
     return await prisma.branch.updateMany({
       where: {
         id: branchId,
-        tenant_id: tenantId,
+        tenantId: tenantId,
       },
       data,
     });
@@ -58,7 +58,7 @@ export class BranchService {
     return await prisma.branch.updateMany({
       where: {
         id: branchId,
-        tenant_id: tenantId,
+        tenantId: tenantId,
       },
       data: {
         is_deleted: true,

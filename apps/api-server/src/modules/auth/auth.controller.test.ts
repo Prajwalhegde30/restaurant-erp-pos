@@ -46,7 +46,7 @@ describe('Auth Controller', () => {
 
   test('should return 401 if user not found', async () => {
     prismaMock.user.findFirst.mockResolvedValue(null);
-    await AuthController.login(req as Request, res as Response, next);
+    await AuthController.login(req as Request, res as Response, next as unknown as NextFunction);
     expect(statusMock).toHaveBeenCalledWith(401);
     expect(jsonMock).toHaveBeenCalledWith({ error: { message: 'Invalid credentials' } });
   });
@@ -59,7 +59,7 @@ describe('Auth Controller', () => {
       tenantId: 'tenant-1',
     } as unknown as Record<string, unknown>);
 
-    await AuthController.login(req as Request, res as Response, next);
+    await AuthController.login(req as Request, res as Response, next as unknown as NextFunction);
     expect(statusMock).toHaveBeenCalledWith(401);
   });
 
@@ -73,7 +73,7 @@ describe('Auth Controller', () => {
       branchAssignments: [{ branchId: 'branch-1' }],
     } as unknown as Record<string, unknown>);
 
-    await AuthController.login(req as Request, res as Response, next);
+    await AuthController.login(req as Request, res as Response, next as unknown as NextFunction);
     expect(statusMock).toHaveBeenCalledWith(200);
     expect(jsonMock).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -130,62 +130,64 @@ export default function StaffPage() {
         </Button>
       </div>
 
-      <div className="rounded-md border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {staffList.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell className="font-medium">
-                  {user.firstName} {user.lastName}
-                </TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>
-                  <Badge variant={!user.isDeleted ? 'default' : 'secondary'}>
-                    {!user.isDeleted ? 'Active' : 'Inactive'}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleOpenForm(user)}
-                    disabled={deleteMutation.isPending || saveMutation.isPending}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => setDeleteId(user.id)}
-                    disabled={deleteMutation.isPending || saveMutation.isPending}
-                  >
-                    Delete
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            {staffList.length === 0 && (
+      <div className="rounded-md border bg-card overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader className="bg-muted/50">
               <TableRow>
-                <TableCell colSpan={4} className="h-24">
-                  <EmptyState
-                    title="No staff found"
-                    description="You haven't added any staff members yet."
-                    actionLabel="Add Staff"
-                    onAction={() => handleOpenForm()}
-                  />
-                </TableCell>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {staffList.map((user) => (
+                <TableRow key={user.id} className="hover:bg-muted/50 transition-colors">
+                  <TableCell className="font-medium">
+                    {user.firstName} {user.lastName}
+                  </TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>
+                    <Badge variant={!user.isDeleted ? 'default' : 'secondary'}>
+                      {!user.isDeleted ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenForm(user)}
+                      disabled={deleteMutation.isPending || saveMutation.isPending}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setDeleteId(user.id)}
+                      disabled={deleteMutation.isPending || saveMutation.isPending}
+                    >
+                      Delete
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {staffList.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} className="h-24">
+                    <EmptyState
+                      title="No staff found"
+                      description="You haven't added any staff members yet."
+                      actionLabel="Add Staff"
+                      onAction={() => handleOpenForm()}
+                    />
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       <Dialog open={isFormOpen} onOpenChange={(open) => !open && handleCloseForm()}>
@@ -197,28 +199,59 @@ export default function StaffPage() {
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input id="firstName" {...register('firstName')} disabled={isSubmitting} />
+                  <Label htmlFor="firstName">
+                    First Name <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="firstName"
+                    placeholder="e.g. John"
+                    autoFocus
+                    {...register('firstName')}
+                    disabled={isSubmitting}
+                  />
                   {errors.firstName && (
                     <p className="text-xs text-destructive">{errors.firstName.message}</p>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input id="lastName" {...register('lastName')} disabled={isSubmitting} />
+                  <Label htmlFor="lastName">
+                    Last Name <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="lastName"
+                    placeholder="e.g. Doe"
+                    {...register('lastName')}
+                    disabled={isSubmitting}
+                  />
                   {errors.lastName && (
                     <p className="text-xs text-destructive">{errors.lastName.message}</p>
                   )}
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" {...register('email')} disabled={isSubmitting} />
+                <Label htmlFor="email">
+                  Email <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="john.doe@example.com"
+                  {...register('email')}
+                  disabled={isSubmitting}
+                />
                 {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="pin">{editingStaff ? 'New PIN (optional)' : 'PIN'}</Label>
-                <Input id="pin" type="password" {...register('pin')} disabled={isSubmitting} />
+                <Label htmlFor="pin">
+                  {editingStaff ? 'New PIN (optional)' : 'PIN (optional)'}
+                </Label>
+                <Input
+                  id="pin"
+                  type="password"
+                  placeholder="****"
+                  {...register('pin')}
+                  disabled={isSubmitting}
+                />
                 {errors.pin && <p className="text-xs text-destructive">{errors.pin.message}</p>}
               </div>
             </div>
@@ -232,7 +265,7 @@ export default function StaffPage() {
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Saving...' : 'Save'}
+                {isSubmitting ? 'Saving...' : 'Save Changes'}
               </Button>
             </DialogFooter>
           </form>

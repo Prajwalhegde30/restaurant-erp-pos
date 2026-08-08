@@ -8,7 +8,7 @@ export interface AuthenticatedRequest extends AuthRequest {
 }
 
 export function loggerMiddleware(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  const correlationId = (req.headers['x-correlation-id'] as string) || uuidv4();
+  const correlationId = (req.headers?.['x-correlation-id'] as string) || uuidv4();
 
   // Create a logger instance for this request
   const reqLogger = createLoggerWithContext({

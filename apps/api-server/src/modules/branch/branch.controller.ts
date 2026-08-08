@@ -6,11 +6,11 @@ import { AuthenticatedRequest } from '../../middleware/logger.middleware';
 // We omit the fields that are generated or read-only from the create payload
 const CreateBranchDto = BranchSchema.omit({
   id: true,
-  tenant_id: true,
-  created_at: true,
-  updated_at: true,
-  is_deleted: true,
-  deleted_at: true,
+  tenantId: true,
+  createdAt: true,
+  updatedAt: true,
+  isDeleted: true,
+  deletedAt: true,
 });
 
 const UpdateBranchDto = CreateBranchDto.partial();

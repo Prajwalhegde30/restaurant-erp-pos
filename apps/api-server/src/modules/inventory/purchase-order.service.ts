@@ -93,9 +93,6 @@ export class PurchaseOrderService {
         supplier: true,
         purchaseOrderItems: {
           where: { isDeleted: false },
-          include: {
-            ingredient: true,
-          },
         },
         goodsReceipts: {
           where: { isDeleted: false },

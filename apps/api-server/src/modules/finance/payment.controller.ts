@@ -1,13 +1,15 @@
-import { Request, Response } from 'express';
+import { AuthRequest } from '@repo/auth';
+import { Response } from 'express';
 import { PaymentService } from './payment.service';
 import { CreatePaymentSchema } from './payment.schema';
 
 export class PaymentController {
-  static async processPayment(req: Request, res: Response) {
+  static async processPayment(req: AuthRequest, res: Response) {
     try {
       const data = CreatePaymentSchema.parse(req.body);
       const tenantId = req.tenantId as string;
-      const idempotencyKey = req.idempotencyKey as string;
+      const idempotencyKey = (req as unknown as { idempotencyKey?: string })
+        .idempotencyKey as string;
       const userId = req.user?.id;
 
       const result = await PaymentService.processPayment(tenantId, idempotencyKey, data, userId);
@@ -40,7 +42,7 @@ export class PaymentController {
     }
   }
 
-  static async getPayments(req: Request, res: Response) {
+  static async getPayments(req: AuthRequest, res: Response) {
     try {
       const tenantId = req.tenantId as string;
       const invoiceId = req.query.invoiceId as string | undefined;
@@ -62,7 +64,7 @@ export class PaymentController {
     }
   }
 
-  static async getPaymentById(req: Request, res: Response) {
+  static async getPaymentById(req: AuthRequest, res: Response) {
     try {
       const tenantId = req.tenantId as string;
       const id = req.params.id;
