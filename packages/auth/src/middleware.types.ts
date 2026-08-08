@@ -61,9 +61,12 @@ export interface AuthRequest {
   /** Convenience shortcut: active branch ID */
   branchId?: string | null;
   userId?: string;
-  body?: unknown;
-  params?: unknown;
-  query?: unknown;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  body?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  params?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  query?: any;
 }
 
 /**

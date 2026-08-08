@@ -28,7 +28,8 @@ export function errorHandler(
         type: 'validation_error',
         code: 'invalid_parameter',
         message: 'Request payload validation failed.',
-        details: err.issues.map((e: { path: string[]; message: string }) => ({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        details: err.issues.map((e: any) => ({
           field: e.path.join('.'),
           issue: e.message,
         })),

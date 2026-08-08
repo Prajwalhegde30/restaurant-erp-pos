@@ -1,6 +1,6 @@
 import { expect, test, describe, vi, beforeEach } from 'vitest';
 import { AuthController } from './auth.controller';
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 const { prismaMock } = vi.hoisted(() => {
   return {
     prismaMock: {

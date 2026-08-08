@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import { loggerMiddleware } from './middleware/logger.middleware';
 import { errorHandler } from './middleware/error.middleware';
 import { branchRouter } from './modules/branch/branch.router';
@@ -42,6 +43,26 @@ const port = process.env.PORT || 3001;
 
 import { idempotencyMiddleware } from './middleware/idempotency.middleware';
 
+if (process.env.TRUST_PROXY === 'true') {
+  app.set('trust proxy', 1);
+}
+
+const globalLimiter = rateLimit({
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10),
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many requests, please try again later.' },
+});
+
+const authLimiter = rateLimit({
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10),
+  max: parseInt(process.env.AUTH_RATE_LIMIT_MAX_REQUESTS || '10', 10),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many authentication attempts, please try again later.' },
+});
+
 // Global Middlewares
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
@@ -67,6 +88,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use(globalLimiter);
 app.use(loggerMiddleware as unknown as express.RequestHandler);
 
 // Health check
@@ -75,7 +97,7 @@ app.get('/health', (req, res) => {
 });
 
 // V1 API Routes
-app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/auth', authLimiter, authRouter);
 
 // Global authenticated middleware for V1 routes
 import { authMiddleware } from './middleware/auth.middleware';
