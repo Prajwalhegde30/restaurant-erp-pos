@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { loggerMiddleware } from './middleware/logger.middleware';
 import { errorHandler } from './middleware/error.middleware';
@@ -38,40 +39,42 @@ import { DepletionJobPayload } from './modules/inventory/workers/depletion.produ
 // Worker reference
 let depletionWorker: Worker<DepletionJobPayload> | undefined;
 
+import { env } from './config/env';
+
 const app = express();
-const port = process.env.PORT || 3001;
+const port = env.PORT;
 
 import { idempotencyMiddleware } from './middleware/idempotency.middleware';
 
-if (process.env.TRUST_PROXY === 'true') {
+if (env.TRUST_PROXY) {
   app.set('trust proxy', 1);
 }
 
 const globalLimiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10),
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
+  windowMs: env.RATE_LIMIT_WINDOW_MS,
+  max: env.RATE_LIMIT_MAX_REQUESTS,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: 'Too many requests, please try again later.' },
 });
 
 const authLimiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10),
-  max: parseInt(process.env.AUTH_RATE_LIMIT_MAX_REQUESTS || '10', 10),
+  windowMs: env.RATE_LIMIT_WINDOW_MS,
+  max: env.AUTH_RATE_LIMIT_MAX_REQUESTS,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: 'Too many authentication attempts, please try again later.' },
 });
 
 // Global Middlewares
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
+const allowedOrigins = env.ALLOWED_ORIGINS
+  ? env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
   : [];
 
 const corsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     if (!origin) {
-      if (process.env.NODE_ENV === 'production') {
+      if (env.NODE_ENV === 'production') {
         return callback(new Error('Not allowed by CORS'));
       }
       return callback(null, true);
@@ -86,6 +89,7 @@ const corsOptions = {
   credentials: true,
 };
 
+app.use(helmet());
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(globalLimiter);

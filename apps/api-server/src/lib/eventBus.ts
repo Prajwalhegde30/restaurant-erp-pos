@@ -1,7 +1,8 @@
 import { EventBus } from '@repo/pubsub';
 import { logger } from '@repo/logger';
+import { env } from '../config/env';
 
-const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+const redisUrl = env.REDIS_URL;
 export const eventBus = new EventBus(redisUrl);
 
 export async function initEventBus() {
